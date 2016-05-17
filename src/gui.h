@@ -18,11 +18,18 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <gtk/gtk.h>
 
 /*----------------------------------------------------------------------------
-** Constant definitions
+**  Structure definitions
 **--------------------------------------------------------------------------*/
-#define X11SPICE_ERR_BADARGS            1
-#define X11SPICE_ERR_NODISPLAY          2
-#define X11SPICE_ERR_GTK_FAILED         3
+typedef struct
+{
+    GtkWidget *window;
+} gui_t;
 
+/*----------------------------------------------------------------------------
+**  Prototypes
+**--------------------------------------------------------------------------*/
+int gui_init(gui_t *gui, int argc, char *argv[]);
+void gui_run(gui_t *gui);

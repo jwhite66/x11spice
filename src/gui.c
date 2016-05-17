@@ -18,11 +18,24 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include "gui.h"
+#include "x11spice.h"
 
-/*----------------------------------------------------------------------------
-** Constant definitions
-**--------------------------------------------------------------------------*/
-#define X11SPICE_ERR_BADARGS            1
-#define X11SPICE_ERR_NODISPLAY          2
-#define X11SPICE_ERR_GTK_FAILED         3
+int gui_init(gui_t *gui, int argc, char *argv[])
+{
+    GtkWidget *window;
 
+    if (! gtk_init_check(&argc, &argv))
+        return X11SPICE_ERR_GTK_FAILED;
+
+    gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    g_signal_connect(gui->window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    gtk_widget_show(gui->window);
+
+    return 0;
+}
+
+void gui_run(gui_t *gui)
+{
+    gtk_main();
+}

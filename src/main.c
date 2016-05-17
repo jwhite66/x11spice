@@ -24,6 +24,7 @@
 #include "x11spice.h"
 #include "options.h"
 #include "display.h"
+#include "gui.h"
 
 int main(int argc, char *argv[])
 {
@@ -31,6 +32,7 @@ int main(int argc, char *argv[])
 
     options_t   options;
     display_t * display = NULL;
+    gui_t       gui;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
@@ -50,9 +52,12 @@ int main(int argc, char *argv[])
         goto exit;
     }
 
-    /* FIXME - add a main loop... */
-
-    rc = 0;
+    /*------------------------------------------------------------------------
+    **  Run the gui
+    **----------------------------------------------------------------------*/
+    rc = gui_init(&gui, argc, argv);
+    if (rc == 0)
+        gui_run(&gui);
 
     /*------------------------------------------------------------------------
     **  Close the display, go home
