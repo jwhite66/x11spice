@@ -318,6 +318,20 @@ void initialize_spice_instance(spice_t *s)
     s->display_sin.st = (struct QXLState*) s;
 }
 
+static void set_options(spice_t *s, options_t *options)
+{
+    if (options->disable_ticketing)
+        spice_server_set_noauth(s->server);
+
+    spice_server_set_addr(s->server, options->spice_addr ?
+            options->spice_addr : "", 0);
+    if (options->spice_port)
+        spice_server_set_port(s->server, options->spice_port);
+
+    if (options->spice_password)
+        spice_server_set_ticket(s->server, options->spice_password, 0, 0, 0);
+}
+
 int spice_start(spice_t *s, options_t *options)
 {
     s->server = spice_server_new();
@@ -325,6 +339,8 @@ int spice_start(spice_t *s, options_t *options)
         return X11SPICE_ERR_SPICE_INIT_FAILED;
 
     initialize_spice_instance(s);
+
+    set_options(s, options);
 
     if (spice_server_init(s->server, s->core) < 0)
     {

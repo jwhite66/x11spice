@@ -28,6 +28,12 @@ typedef struct
 {
     long timeout;
     char *display;
+
+    char *spice_addr;
+    int  spice_port;
+    char *spice_password;
+    int  disable_ticketing;
+    int  exit_on_disconnect;
 } options_t;
 
 
@@ -37,5 +43,6 @@ typedef struct
 void options_init(options_t *options);
 int options_parse_arguments(int argc, char *argv[], options_t *options);
 void options_free(options_t *options);
+void options_from_config(options_t *options);
 
 #endif

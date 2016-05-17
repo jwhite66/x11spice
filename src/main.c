@@ -43,6 +43,7 @@ int main(int argc, char *argv[])
     rc = options_parse_arguments(argc, argv, &options);
     if (rc)
         goto exit;
+    options_from_config(&options);
 
     /*------------------------------------------------------------------------
     **  Open the display

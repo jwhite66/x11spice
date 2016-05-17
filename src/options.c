@@ -19,6 +19,7 @@
 */
 
 
+#include <glib.h>
 #include <getopt.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,8 +40,53 @@ void options_free(options_t *options)
         free(options->display);
         options->display = NULL;
     }
+
+    g_free(options->spice_addr);
+    options->spice_addr = NULL;
+
+    g_free(options->spice_password);
+    options->spice_password = NULL;
 }
 
+
+static gchar * string_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gchar *key)
+{
+    gchar *ret = NULL;
+    GError *error = NULL;
+
+    if (u)
+        ret = g_key_file_get_string(u, section, key, &error);
+    if ((! u || error) && s)
+        ret = g_key_file_get_string(s, section, key, NULL);
+
+    return ret;
+}
+
+static gint int_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gchar *key)
+{
+    gint ret = 0;
+    GError *error = NULL;
+
+    if (u)
+        ret = g_key_file_get_integer(u, section, key, &error);
+    if ((! u || error) && s)
+        ret = g_key_file_get_integer(s, section, key, NULL);
+
+    return ret;
+}
+
+static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gchar *key)
+{
+    gboolean ret = FALSE;
+    GError *error = NULL;
+
+    if (u)
+        ret = g_key_file_get_boolean(u, section, key, &error);
+    if ((! u || error) && s)
+        ret = g_key_file_get_boolean(s, section, key, NULL);
+
+    return ret;
+}
 static void usage(char *argv0)
 {
     fprintf(stderr, "%s: \n", argv0);
@@ -94,4 +140,33 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     }
 
     return rc;
+}
+
+void options_from_config(options_t *options)
+{
+    GKeyFile * userkey = g_key_file_new();
+    GKeyFile * systemkey = g_key_file_new();
+
+    char * user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice", NULL);
+
+    if(!g_key_file_load_from_file(userkey, user_config_file, G_KEY_FILE_NONE, NULL))
+    {
+        g_key_file_free(userkey);
+        userkey = NULL;
+    }
+
+    if (!g_key_file_load_from_dirs(systemkey, "x11spice", (const char**)g_get_system_config_dirs(),
+            NULL, G_KEY_FILE_NONE, NULL))
+    {
+        g_key_file_free(systemkey);
+        systemkey = NULL;
+    }
+
+    options->spice_addr = string_option(userkey, systemkey, "spice", "addr");
+    options->spice_password = string_option(userkey, systemkey, "spice", "password");
+    options->spice_port = int_option(userkey, systemkey, "spice", "port");
+    options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable_ticketing");
+    options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit_on_disconnect");
+
+    g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr, options->disable_ticketing, options->spice_port);
 }
