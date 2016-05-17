@@ -23,6 +23,7 @@
 
 #include "x11spice.h"
 #include "options.h"
+#include "local_spice.h"
 #include "display.h"
 #include "gui.h"
 
@@ -33,6 +34,7 @@ int main(int argc, char *argv[])
     options_t   options;
     display_t * display = NULL;
     gui_t       gui;
+    spice_t     s;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
@@ -53,11 +55,22 @@ int main(int argc, char *argv[])
     }
 
     /*------------------------------------------------------------------------
-    **  Run the gui
+    **  Initialize the GUI
     **----------------------------------------------------------------------*/
     rc = gui_init(&gui, argc, argv);
-    if (rc == 0)
-        gui_run(&gui);
+    if (rc)
+        goto exit;
+
+    /*------------------------------------------------------------------------
+    **  Start up a spice server
+    **----------------------------------------------------------------------*/
+    rc = spice_start(&s, &options);
+    if (rc)
+        goto exit;
+
+    gui_run(&gui);
+
+    spice_end(&s);
 
     /*------------------------------------------------------------------------
     **  Close the display, go home

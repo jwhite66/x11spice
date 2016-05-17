@@ -18,6 +18,9 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef GUI_H_
+#define GUI_H_
+
 #include <gtk/gtk.h>
 
 /*----------------------------------------------------------------------------
@@ -33,3 +36,5 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int gui_init(gui_t *gui, int argc, char *argv[]);
 void gui_run(gui_t *gui);
+
+#endif

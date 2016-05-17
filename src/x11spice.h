@@ -18,6 +18,8 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef X11SPICE_H_
+#define X11SPICE_H_
 
 /*----------------------------------------------------------------------------
 ** Constant definitions
@@ -25,4 +27,6 @@
 #define X11SPICE_ERR_BADARGS            1
 #define X11SPICE_ERR_NODISPLAY          2
 #define X11SPICE_ERR_GTK_FAILED         3
+#define X11SPICE_ERR_SPICE_INIT_FAILED  4
 
+#endif

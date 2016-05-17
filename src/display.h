@@ -18,6 +18,9 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef DISPLAY_H_
+#define DISPLAY_H_
+
 #include <X11/Xlib.h>
 
 /*----------------------------------------------------------------------------
@@ -35,3 +38,4 @@ typedef struct
 display_t *display_open(options_t *options);
 void display_close(display_t *display);
 
+#endif

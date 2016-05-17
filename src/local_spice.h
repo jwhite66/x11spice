@@ -18,24 +18,29 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef OPTIONS_H_
-#define OPTIONS_H_
+#ifndef LOCAL_SPICE_H_
+#define LOCAL_SPICE_H_
+
+#include <spice.h>
+
+#include "options.h"
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct
 {
-    long timeout;
-    char *display;
-} options_t;
-
+    SpiceServer *server;
+    SpiceCoreInterface *core;
+    QXLInstance display_sin;
+    QXLWorker *worker;
+    int compression_level;
+} spice_t;
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-void options_init(options_t *options);
-int options_parse_arguments(int argc, char *argv[], options_t *options);
-void options_free(options_t *options);
+int spice_start(spice_t *s, options_t *options);
+void spice_end(spice_t *s);
 
 #endif
