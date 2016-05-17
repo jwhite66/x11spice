@@ -16,3 +16,5 @@ Makefile.in
 *.o
 
 src/x11spice
+config.guess
+config.sub
