@@ -28,5 +28,7 @@
 #define X11SPICE_ERR_NODISPLAY          2
 #define X11SPICE_ERR_GTK_FAILED         3
 #define X11SPICE_ERR_SPICE_INIT_FAILED  4
+#define X11SPICE_ERR_NODAMAGE           5
+#define X11SPICE_ERR_NOWATCH            6
 
 #endif

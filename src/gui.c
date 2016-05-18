@@ -23,8 +23,6 @@
 
 int gui_init(gui_t *gui, int argc, char *argv[])
 {
-    GtkWidget *window;
-
     if (! gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
 

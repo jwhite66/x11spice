@@ -26,61 +26,70 @@
 #include "local_spice.h"
 #include "display.h"
 #include "gui.h"
+#include "session.h"
 
 int main(int argc, char *argv[])
 {
     int rc;
 
-    options_t   options;
-    display_t * display = NULL;
-    gui_t       gui;
-    spice_t     s;
+    session_t   session;
+
+    int         display_opened = 0;
+    int         spice_started = 0;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
     **----------------------------------------------------------------------*/
-    options_init(&options);
-    rc = options_parse_arguments(argc, argv, &options);
+    options_init(&session.options);
+    rc = options_parse_arguments(argc, argv, &session.options);
     if (rc)
         goto exit;
-    options_from_config(&options);
+    options_from_config(&session.options);
 
     /*------------------------------------------------------------------------
     **  Open the display
     **----------------------------------------------------------------------*/
-    display = display_open(&options);
-    if (! display)
-    {
-        rc = X11SPICE_ERR_NODISPLAY;
+    rc = display_open(&session.display, &session.options);
+    if (rc)
         goto exit;
-    }
+    display_opened = 1;
 
     /*------------------------------------------------------------------------
     **  Initialize the GUI
     **----------------------------------------------------------------------*/
-    rc = gui_init(&gui, argc, argv);
+    rc = gui_init(&session.gui, argc, argv);
     if (rc)
         goto exit;
 
     /*------------------------------------------------------------------------
     **  Start up a spice server
     **----------------------------------------------------------------------*/
-    rc = spice_start(&s, &options);
+    rc = spice_start(&session.spice, &session.options);
+    if (rc)
+        goto exit;
+    spice_started = 1;
+
+    /*------------------------------------------------------------------------
+    **  Leave the GUI running until we have a reason to quit
+    **----------------------------------------------------------------------*/
+    rc = session_start(&session);
     if (rc)
         goto exit;
 
-    gui_run(&gui);
-
-    spice_end(&s);
+    gui_run(&session.gui);
+    session_end(&session);
 
     /*------------------------------------------------------------------------
-    **  Close the display, go home
+    **  Clean up, go home
     **----------------------------------------------------------------------*/
 exit:
-    options_free(&options);
+    if (spice_started)
+        spice_end(&session.spice);
 
-    if (display)
-        display_close(display);
+    if (display_opened)
+        display_close(&session.display);
+
+    options_free(&session.options);
 
     return rc;
 }

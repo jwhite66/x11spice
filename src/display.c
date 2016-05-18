@@ -22,34 +22,39 @@
 #include <stdio.h>
 
 #include <X11/Xlib.h>
+#include <glib.h>
 
+#include "x11spice.h"
 #include "options.h"
 #include "display.h"
 
 
-display_t *display_open(options_t *options)
+int display_open(display_t *d, options_t *options)
 {
-    display_t *d = malloc(sizeof(*d));
-    if (! d)
-        return NULL;
-
     d->xdisplay = XOpenDisplay(options->display);
-    // FIXME g_x_error_handler = XSetErrorHandler(handle_xerrors);
+    // FIXME - do we care? - g_x_error_handler = XSetErrorHandler(handle_xerrors);
     if (! d->xdisplay)
     {
         fprintf(stderr, "Error:  could not open display %s\n", options->display ? options->display : "");
-        return NULL;
+        return X11SPICE_ERR_NODISPLAY;
     }
 
-    return d;
+    if (! XDamageQueryExtension(d->xdisplay, &d->xd_event_base, &d->xd_error_base))
+    {
+        fprintf(stderr, "Error:  XDAMAGE not found on display %s\n", options->display ? options->display : "");
+        return X11SPICE_ERR_NODAMAGE;
+    }
+
+    d->xdamage = XDamageCreate(d->xdisplay, DefaultRootWindow(d->xdisplay), XDamageReportRawRectangles);
+
+    g_info("Display %s opened", options->display ? options->display : "");
+
+    return 0;
 }
 
-void display_close(display_t *display)
+void display_close(display_t *d)
 {
-    if (display->xdisplay)
-    {
-        XCloseDisplay(display->xdisplay);
-        display->xdisplay = NULL;
-    }
+    XDamageDestroy(d->xdisplay, d->xdamage);
+    XCloseDisplay(d->xdisplay);
 }
 

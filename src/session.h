@@ -18,28 +18,29 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef DISPLAY_H_
-#define DISPLAY_H_
+#ifndef SESSION_H_
+#define SESSION_H_
 
-#include <X11/Xlib.h>
-#include <X11/extensions/Xdamage.h>
+#include "options.h"
+#include "display.h"
+#include "local_spice.h"
+#include "gui.h"
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct
 {
-    Display *xdisplay;
-    Damage xdamage;
-    int xd_event_base;
-    int xd_error_base;
-} display_t;
-
+    options_t   options;
+    display_t   display;
+    spice_t     spice;
+    gui_t       gui;
+    SpiceWatch  *xwatch;
+} session_t;
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int display_open(display_t *display, options_t *options);
-void display_close(display_t *display);
-
+int session_start(session_t *s);
+void session_end(session_t *s);
 #endif
