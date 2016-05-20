@@ -49,55 +49,134 @@ static void save_ximage_pnm(XImage *img)
     fclose(fp);
 }
 
+static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
+{
+    QXLDrawable *drawable;
+    QXLImage *qxl_image;
+    int i;
+
+    drawable = calloc(1, sizeof(*drawable) + sizeof(*qxl_image));
+    if (! drawable)
+        return NULL;
+    qxl_image = (QXLImage *) (drawable + 1);
+
+    drawable->release_info.id = (uint64_t) shmi;
+    shmi->drawable_ptr = drawable;
+
+    drawable->surface_id = 0;
+    drawable->type = QXL_DRAW_COPY;;
+    drawable->effect = QXL_EFFECT_OPAQUE;
+    drawable->clip.type = SPICE_CLIP_TYPE_NONE;
+    drawable->bbox.left = x;
+    drawable->bbox.top = y;
+    drawable->bbox.right = x + shmi->img->width;
+    drawable->bbox.bottom = y + shmi->img->height;
+
+    /*
+     * surfaces_dest[i] should apparently be filled out with the
+     * surfaces that we depend on, and surface_rects should be
+     * filled with the rectangles of those surfaces that we
+     * are going to use.
+     *  FIXME - explore this instead of blindly copying...
+     */
+    for (i = 0; i < 3; ++i)
+	drawable->surfaces_dest[i] = -1;
+
+    drawable->u.copy.src_area = drawable->bbox;
+    drawable->u.copy.rop_descriptor = SPICE_ROPD_OP_PUT;
+
+    drawable->u.copy.src_bitmap = (QXLPHYSICAL) qxl_image;
+
+    qxl_image->descriptor.id = 0;
+    qxl_image->descriptor.type = SPICE_IMAGE_TYPE_BITMAP;
+
+    qxl_image->descriptor.flags = 0;
+    qxl_image->descriptor.width = shmi->img->width;
+    qxl_image->descriptor.height = shmi->img->height;
+
+    // FIXME - be a bit more dynamic...
+    qxl_image->bitmap.format = SPICE_BITMAP_FMT_RGBA;
+    qxl_image->bitmap.flags = SPICE_BITMAP_FLAGS_TOP_DOWN | QXL_BITMAP_DIRECT;
+    qxl_image->bitmap.x = shmi->img->width;
+    qxl_image->bitmap.y = shmi->img->height;
+    qxl_image->bitmap.stride = shmi->img->bytes_per_line;
+    qxl_image->bitmap.palette = 0;
+    qxl_image->bitmap.data = (QXLPHYSICAL) shmi->img->data;
+
+    // FIXME - cache images at all?
+
+    return drawable;
+}
+
 static void session_handle_xevent(int fd, int event, void *opaque)
 {
     session_t *s = (session_t *) opaque;
     XEvent xev;
     int rc;
     XDamageNotifyEvent *dev = (XDamageNotifyEvent *) &xev;;
+    shm_image_t *shmi = NULL;
 
     rc = XNextEvent(s->display.xdisplay, &xev);
-    if (rc == 0)
-    {
-        shm_image_t shmi;
+    if (rc)
+        return;
 
-        if (xev.type != s->display.xd_event_base + XDamageNotify)
+    if (xev.type != s->display.xd_event_base + XDamageNotify)
+    {
+        g_debug("Unexpected X event %d", xev.type);
+        return;
+    }
+
+    g_debug("XDamageNotify [ser %ld|send_event %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
+        dev->serial, dev->send_event, dev->level, dev->more,
+        dev->area.width, dev->area.height, dev->area.x, dev->area.y,
+        dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+    shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
+    if (!shmi)
+    {
+        g_debug("Unexpected failure to create_shm_image of area %dx%d", dev->area.width, dev->area.width);
+        return;
+    }
+
+    if (read_shm_image(&s->display, shmi, dev->area.x, dev->area.y) == 0)
+    {
+        //save_ximage_pnm(shmi.img);
+        QXLDrawable *drawable = shm_image_to_drawable(shmi, dev->area.x, dev->area.y);
+        if (drawable)
         {
-            g_debug("Unexpected X event %d", xev.type);
+            g_async_queue_push(s->draw_queue, drawable);
+            spice_qxl_wakeup(&s->spice.display_sin);
+            // FIXME - Note that shmi is not cleaned up at this point
             return;
         }
-
-        g_debug("XDamageNotify [ser %ld|send_event %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
-            dev->serial, dev->send_event, dev->level, dev->more,
-            dev->area.width, dev->area.height, dev->area.x, dev->area.y,
-            dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
-        if (create_shm_image(&s->display, &shmi, dev->area.width, dev->area.height) == 0)
-        {
-            if (read_shm_image(&s->display, &shmi, dev->area.x, dev->area.y) == 0)
-            {
-                //save_ximage_pnm(shmi.img);
-                spice_qxl_wakeup(&s->spice.display_sin);
-            }
-            destroy_shm_image(&s->display, &shmi);
-        }
-
+        else
+            g_debug("Unexpected failure to create drawable");
     }
+    else
+        g_debug("Unexpected failure to read shm of area %dx%d", dev->area.width, dev->area.width);
+
+
+    if (shmi)
+        destroy_shm_image(&s->display, shmi);
 }
 
+
+// FIXME - this is not really satisfying.  It'd be
+//         nicer over in spice.c.  But spice.c needs
+//         access to the display info if it can.
 static int create_primary(session_t *s)
 {
-    int rc;
     int scr = DefaultScreen(s->display.xdisplay);
     QXLDevSurfaceCreate surface;
 
-    rc = create_shm_image(&s->display, &s->display.fullscreen, 0, 0);
-    if (rc)
-        return rc;
+    s->display.fullscreen = create_shm_image(&s->display, 0, 0);
+    if (!s->display.fullscreen)
+        return X11SPICE_ERR_NOSHM;
 
     memset(&surface, 0, sizeof(surface));
     surface.height     = DisplayHeight(s->display.xdisplay, scr);
     surface.width      = DisplayWidth(s->display.xdisplay, scr);
-    surface.stride     = -s->display.fullscreen.img->bytes_per_line;
+    // FIXME - negative stride?
+    surface.stride     = s->display.fullscreen->img->bytes_per_line;
     surface.type       = QXL_SURF_TYPE_PRIMARY;
     surface.flags      = 0;
     surface.group_id   = 0;
@@ -108,20 +187,49 @@ static int create_primary(session_t *s)
 
     // FIXME - compute this dynamically?
     surface.format     = SPICE_SURFACE_FMT_32_xRGB;
-    surface.mem        = (QXLPHYSICAL) s->display.fullscreen.img->data;
+    surface.mem        = (QXLPHYSICAL) s->display.fullscreen->img->data;
 
     spice_qxl_create_primary_surface(&s->spice.display_sin, 0, &surface);
 
     return 0;
 }
 
+void free_cursor_queue_item(gpointer data)
+{
+    // FIXME
+}
+
+void free_draw_queue_item(gpointer data)
+{
+    // FIXME
+}
+
+void *session_pop_draw(void *session_ptr)
+{
+    session_t *s = (session_t *) session_ptr;
+
+    return g_async_queue_try_pop(s->draw_queue);
+}
+
+int session_draw_waiting(void *session_ptr)
+{
+    session_t *s = (session_t *) session_ptr;
+
+    return g_async_queue_length(s->draw_queue);
+}
+
 int session_start(session_t *s)
 {
-    int rc;
+    int rc = 0;
+
+    s->spice.session_ptr = s;
     s->xwatch = s->spice.core->watch_add(ConnectionNumber(s->display.xdisplay),
                     SPICE_WATCH_EVENT_READ, session_handle_xevent, s);
     if (! s->xwatch)
-        return X11SPICE_ERR_NOWATCH;
+        return(X11SPICE_ERR_NOWATCH);
+
+    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
+    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
 
     /* In order for the watch to function,
         we seem to have to request at least one event */
@@ -130,12 +238,16 @@ int session_start(session_t *s)
 
     rc = create_primary(s);
     if (rc)
-        return rc;
+        session_end(s);
 
-    return 0;
+    return rc;
 }
 
 void session_end(session_t *s)
 {
     s->spice.core->watch_remove(s->xwatch);
+    if (s->cursor_queue)
+        g_async_queue_unref(s->cursor_queue);
+    if (s->draw_queue)
+        g_async_queue_unref(s->draw_queue);
 }

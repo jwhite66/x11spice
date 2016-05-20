@@ -35,6 +35,8 @@ typedef struct
     QXLInstance display_sin;
     QXLWorker *worker;
     int compression_level;
+
+    void *session_ptr;
 } spice_t;
 
 /*----------------------------------------------------------------------------

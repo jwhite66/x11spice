@@ -36,6 +36,9 @@ typedef struct
     spice_t     spice;
     gui_t       gui;
     SpiceWatch  *xwatch;
+
+    GAsyncQueue *cursor_queue;
+    GAsyncQueue *draw_queue;
 } session_t;
 
 /*----------------------------------------------------------------------------
@@ -43,4 +46,7 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int session_start(session_t *s);
 void session_end(session_t *s);
+
+void *session_pop_draw(void *session_ptr);
+int session_draw_waiting(void *session_ptr);
 #endif

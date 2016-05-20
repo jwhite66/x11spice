@@ -25,6 +25,8 @@
 
 #include "local_spice.h"
 #include "x11spice.h"
+#include "display.h"
+#include "session.h"
 
 struct SpiceTimer {
     SpiceTimerFunc func;
@@ -216,15 +218,32 @@ static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
     // uint8_t internal_groupslot_id;
 }
 
+
 static int get_command(QXLInstance *qin, struct QXLCommandExt *cmd)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
-    return 0;
+    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
+    QXLDrawable *drawable;
+
+    drawable = session_pop_draw(s->session_ptr);
+    if (! drawable)
+        return 0;
+
+    cmd->group_id = 0;
+    cmd->flags = 0;
+    cmd->cmd.type = QXL_CMD_DRAW;
+    cmd->cmd.padding = 0;
+    cmd->cmd.data = (QXLPHYSICAL) drawable;
+
+    return 1;
 }
 
 static int req_cmd_notification(QXLInstance *qin)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
+
+    if (session_draw_waiting(s->session_ptr) > 0)
+        return 0;
+
     return 1;
 }
 
@@ -381,216 +400,3 @@ void spice_end(spice_t *s)
 {
     spice_server_destroy(s->server);
 }
-
-#if defined(HACK_REFERENCE)
-
-void xspice_set_spice_server_options(OptionInfoPtr options)
-{
-    /* environment variables take precedense. If not then take
-     * parameters from the config file. */
-    int addr_flags;
-    int len;
-    spice_image_compression_t compression;
-    spice_wan_compression_t wan_compr;
-    int port = get_int_option(options, OPTION_SPICE_PORT, "XSPICE_PORT");
-    int tls_port =
-        get_int_option(options, OPTION_SPICE_TLS_PORT, "XSPICE_TLS_PORT");
-    const char *password =
-        get_str_option(options, OPTION_SPICE_PASSWORD, "XSPICE_PASSWORD");
-    int disable_ticketing =
-        get_bool_option(options, OPTION_SPICE_DISABLE_TICKETING, "XSPICE_DISABLE_TICKETING");
-    const char *x509_dir =
-        get_str_option(options, OPTION_SPICE_X509_DIR, "XSPICE_X509_DIR");
-    int sasl = get_bool_option(options, OPTION_SPICE_SASL, "XSPICE_SASL");
-    const char *x509_key_file_base =
-        get_str_option(options, OPTION_SPICE_X509_KEY_FILE,
-                       "XSPICE_X509_KEY_FILE");
-    char *x509_key_file = NULL;
-    const char *x509_cert_file_base =
-        get_str_option(options, OPTION_SPICE_X509_CERT_FILE,
-                       "XSPICE_X509_CERT_FILE");
-    char *x509_cert_file = NULL;
-    const char *x509_key_password =
-        get_str_option(options, OPTION_SPICE_X509_KEY_PASSWORD,
-                    "XSPICE_X509_KEY_PASSWORD");
-    const char *tls_ciphers =
-        get_str_option(options, OPTION_SPICE_TLS_CIPHERS,
-                    "XSPICE_TLS_CIPHERS");
-    const char *x509_cacert_file_base =
-        get_str_option(options, OPTION_SPICE_CACERT_FILE,
-                    "XSPICE_CACERT_FILE");
-    char *x509_cacert_file = NULL;
-    const char * addr =
-        get_str_option(options, OPTION_SPICE_ADDR, "XSPICE_ADDR");
-    int ipv4 =
-        get_bool_option(options, OPTION_SPICE_IPV4_ONLY, "XSPICE_IPV4_ONLY");
-    int ipv6 =
-        get_bool_option(options, OPTION_SPICE_IPV6_ONLY, "XSPICE_IPV6_ONLY");
-    const char *x509_dh_file =
-        get_str_option(options, OPTION_SPICE_DH_FILE, "XSPICE_DH_FILE");
-    int disable_copy_paste =
-        get_bool_option(options, OPTION_SPICE_DISABLE_COPY_PASTE,
-                        "XSPICE_DISABLE_COPY_PASTE");
-    int exit_on_disconnect =
-        get_bool_option(options, OPTION_SPICE_EXIT_ON_DISCONNECT,
-                        "XSPICE_EXIT_ON_DISCONNECT");
-    const char *image_compression =
-        get_str_option(options, OPTION_SPICE_IMAGE_COMPRESSION,
-                       "XSPICE_IMAGE_COMPRESSION");
-    const char *jpeg_wan_compression =
-        get_str_option(options, OPTION_SPICE_JPEG_WAN_COMPRESSION,
-                       "XSPICE_JPEG_WAN_COMPRESSION");
-    const char *zlib_glz_wan_compression =
-        get_str_option(options, OPTION_SPICE_ZLIB_GLZ_WAN_COMPRESSION,
-                       "XSPICE_ZLIB_GLZ_WAN_COMPRESSION");
-    const char *streaming_video =
-        get_str_option(options, OPTION_SPICE_STREAMING_VIDEO,
-                       "XSPICE_STREAMING_VIDEO");
-    const char *video_codecs =
-        get_str_option(options, OPTION_SPICE_VIDEO_CODECS,
-                       "XSPICE_VIDEO_CODECS");
-    int agent_mouse =
-        get_bool_option(options, OPTION_SPICE_AGENT_MOUSE,
-                        "XSPICE_AGENT_MOUSE");
-    int playback_compression =
-        get_bool_option(options, OPTION_SPICE_PLAYBACK_COMPRESSION,
-                        "XSPICE_PLAYBACK_COMPRESSION");
-
-    SpiceServer *spice_server = xspice_get_spice_server();
-
-    if (!port && !tls_port) {
-        printf("one of tls-port or port must be set\n");
-        exit(1);
-    }
-    printf("xspice: port = %d, tls_port = %d\n", port, tls_port);
-    if (disable_ticketing) {
-        spice_server_set_noauth(spice_server);
-    }
-    if (tls_port) {
-        if (NULL == x509_dir) {
-            x509_dir = ".";
-        }
-        len = strlen(x509_dir) + 32;
-
-        if (x509_key_file_base) {
-            x509_key_file = strdup(x509_key_file_base);
-        } else {
-            x509_key_file = malloc(len);
-            snprintf(x509_key_file, len, "%s/%s", x509_dir, X509_SERVER_KEY_FILE);
-        }
-
-        if (x509_cert_file_base) {
-            x509_cert_file = strdup(x509_cert_file_base);
-        } else {
-            x509_cert_file = malloc(len);
-            snprintf(x509_cert_file, len, "%s/%s", x509_dir, X509_SERVER_CERT_FILE);
-        }
-
-        if (x509_cacert_file_base) {
-            x509_cacert_file = strdup(x509_cert_file_base);
-        } else {
-            x509_cacert_file = malloc(len);
-            snprintf(x509_cacert_file, len, "%s/%s", x509_dir, X509_CA_CERT_FILE);
-        }
-    }
-
-    addr_flags = 0;
-    if (ipv4) {
-        addr_flags |= SPICE_ADDR_FLAG_IPV4_ONLY;
-    } else if (ipv6) {
-        addr_flags |= SPICE_ADDR_FLAG_IPV6_ONLY;
-    }
-
-    spice_server_set_addr(spice_server, addr ? addr : "", addr_flags);
-    if (port) {
-        spice_server_set_port(spice_server, port);
-    }
-    if (tls_port) {
-        spice_server_set_tls(spice_server, tls_port,
-                             x509_cacert_file,
-                             x509_cert_file,
-                             x509_key_file,
-                             x509_key_password,
-                             x509_dh_file,
-                             tls_ciphers);
-    }
-    if (password) {
-        spice_server_set_ticket(spice_server, password, 0, 0, 0);
-    }
-    if (sasl) {
-#if SPICE_SERVER_VERSION >= 0x000802 /* 0.8.2 */
-        if (spice_server_set_sasl_appname(spice_server, "xspice") == -1 ||
-            spice_server_set_sasl(spice_server, 1) == -1) {
-            fprintf(stderr, "spice: failed to enable sasl\n");
-            exit(1);
-        }
-#else
-        fprintf(stderr, "spice: sasl is not available (spice >= 0.8.2 required)\n");
-        exit(1);
-#endif
-    }
-
-#if SPICE_SERVER_VERSION >= 0x000801
-    /* we still don't actually support agent in xspice, but this
-     * can't hurt for later, just copied from qemn/ui/spice-core.c */
-    if (disable_copy_paste) {
-        spice_server_set_agent_copypaste(spice_server, 0);
-    }
-#endif
-
-    if (exit_on_disconnect) {
-#if SPICE_SERVER_VERSION >= 0x000b04 /* 0.11.4 */
-        spice_server_set_exit_on_disconnect(spice_server, exit_on_disconnect);
-#else
-        fprintf(stderr, "spice: cannot set exit_on_disconnect (spice >= 0.11.4 required)\n");
-        exit(1);
-#endif
-    }
-
-    compression = SPICE_IMAGE_COMPRESS_AUTO_GLZ;
-    if (image_compression) {
-        compression = parse_compression(image_compression);
-    }
-    spice_server_set_image_compression(spice_server, compression);
-
-    wan_compr = SPICE_WAN_COMPRESSION_AUTO;
-    if (jpeg_wan_compression) {
-        wan_compr = parse_wan_compression(jpeg_wan_compression);
-    }
-    spice_server_set_jpeg_compression(spice_server, wan_compr);
-
-    wan_compr = SPICE_WAN_COMPRESSION_AUTO;
-    if (zlib_glz_wan_compression) {
-        wan_compr = parse_wan_compression(zlib_glz_wan_compression);
-    }
-    spice_server_set_zlib_glz_compression(spice_server, wan_compr);
-
-    if (streaming_video) {
-        int streaming_video_opt = parse_stream_video(streaming_video);
-        spice_server_set_streaming_video(spice_server, streaming_video_opt);
-    }
-
-    if (video_codecs) {
-#if SPICE_SERVER_VERSION >= 0x000c06 /* 0.12.6 */
-        if (spice_server_set_video_codecs(spice_server, video_codecs)) {
-            fprintf(stderr, "spice: invalid video encoder %s\n", video_codecs);
-            exit(1);
-        }
-#else
-        fprintf(stderr, "spice: video_codecs are not available (spice >= 0.12.6 required)\n");
-        exit(1);
-#endif
-    }
-
-    spice_server_set_agent_mouse(spice_server, agent_mouse);
-    spice_server_set_playback_compression(spice_server, playback_compression);
-
-    free(x509_key_file);
-    free(x509_cert_file);
-    free(x509_cacert_file);
-}
-
-#endif
-
-
-

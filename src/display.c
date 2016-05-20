@@ -63,10 +63,15 @@ int display_open(display_t *d, options_t *options)
     return 0;
 }
 
-int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h)
+shm_image_t * create_shm_image(display_t *d, int w, int h)
 {
+    shm_image_t *shmi;
     int scr = DefaultScreen(d->xdisplay);
     int imgsize;
+
+    shmi = calloc(1, sizeof(*shmi));
+    if (! shmi)
+        return shmi;
 
     shmi->img = XShmCreateImage(d->xdisplay,
         DefaultVisual(d->xdisplay, scr),
@@ -76,7 +81,10 @@ int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h)
         w ? w : DisplayWidth(d->xdisplay, scr),
         h ? h : DisplayHeight(d->xdisplay, scr));
     if (! shmi->img)
-        return X11SPICE_ERR_NOSHM;
+    {
+        free(shmi);
+        return NULL;
+    }
 
     imgsize = shmi->img->bytes_per_line * shmi->img->height;
 
@@ -85,7 +93,8 @@ int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h)
     {
         g_error("Cannot get shared memory of size %d", imgsize);
         XDestroyImage(shmi->img);
-        return X11SPICE_ERR_NOSHM;
+        free(shmi);
+        return NULL;
     }
 
     shmi->info.shmaddr = shmi->img->data = shmat(shmi->info.shmid, 0, 0);
@@ -97,10 +106,11 @@ int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h)
         shmdt(shmi->info.shmaddr);
         shmctl(shmi->info.shmid, IPC_RMID, NULL);
         XDestroyImage(shmi->img);
-        return X11SPICE_ERR_NOSHM;
+        free(shmi);
+        return NULL;
     }
 
-    return 0;
+    return shmi;
 }
 
 int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
@@ -121,11 +131,18 @@ void destroy_shm_image(display_t *d, shm_image_t *shmi)
     shmdt(shmi->info.shmaddr);
     shmctl(shmi->info.shmid, IPC_RMID, NULL);
     XDestroyImage(shmi->img);
+    if (shmi->drawable_ptr)
+        free(shmi->drawable_ptr);
 }
 
 void display_close(display_t *d)
 {
     XDamageDestroy(d->xdisplay, d->xdamage);
     XCloseDisplay(d->xdisplay);
+    if (d->fullscreen)
+    {
+        destroy_shm_image(d, d->fullscreen);
+        d->fullscreen = NULL;
+    }
 }
 

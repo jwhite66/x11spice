@@ -32,6 +32,7 @@ typedef struct
 {
     XImage *img;
     XShmSegmentInfo info;
+    void *drawable_ptr;
 }shm_image_t;
 
 typedef struct
@@ -40,7 +41,7 @@ typedef struct
     Damage xdamage;
     int xd_event_base;
     int xd_error_base;
-    shm_image_t fullscreen;
+    shm_image_t *fullscreen;
 } display_t;
 
 
@@ -49,7 +50,7 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int display_open(display_t *display, options_t *options);
 void display_close(display_t *display);
-int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h);
+shm_image_t * create_shm_image(display_t *d, int w, int h);
 int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y);
 void destroy_shm_image(display_t *d, shm_image_t *shmi);
 
