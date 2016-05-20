@@ -23,16 +23,24 @@
 
 #include <X11/Xlib.h>
 #include <X11/extensions/Xdamage.h>
+#include <X11/extensions/XShm.h>
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct
 {
+    XImage *img;
+    XShmSegmentInfo info;
+}shm_image_t;
+
+typedef struct
+{
     Display *xdisplay;
     Damage xdamage;
     int xd_event_base;
     int xd_error_base;
+    shm_image_t fullscreen;
 } display_t;
 
 
@@ -41,5 +49,8 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int display_open(display_t *display, options_t *options);
 void display_close(display_t *display);
+int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h);
+int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y);
+void destroy_shm_image(display_t *d, shm_image_t *shmi);
 
 #endif

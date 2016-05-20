@@ -20,6 +20,7 @@
 
 #include <glib.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "local_spice.h"
@@ -168,13 +169,23 @@ static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
     static int count = 0;
     spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
 
+    static QXLDevMemSlot slot = {
+        .slot_group_id = 0,
+        .slot_id = 0,
+        .generation = 0,
+        .virt_start = 0,
+        .virt_end = ~0,
+        .addr_delta = 0,
+        .qxl_ram_size = ~0,
+        };
+
     if (++count > 1)
     {
         g_info("Ignoring worker %d", count);
         return;
     }
 
-    // FIXME - spice_qxl_add_memslot(qin, &slot);
+    spice_qxl_add_memslot(qin, &slot);
     // FIXME - do we ever need the worker?
     s->worker = qxl_worker;
 }
@@ -208,11 +219,13 @@ static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
 static int get_command(QXLInstance *qin, struct QXLCommandExt *cmd)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return 0;
 }
 
 static int req_cmd_notification(QXLInstance *qin)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return 1;
 }
 
 static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
@@ -223,11 +236,13 @@ static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *cmd)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return 0;
 }
 
 static int req_cursor_notification(QXLInstance *qin)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return 1;
 }
 
 static void notify_update(QXLInstance *qin, uint32_t update_id)
@@ -238,6 +253,8 @@ static void notify_update(QXLInstance *qin, uint32_t update_id)
 static int flush_resources(QXLInstance *qin)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    // Return 0 to direct the server to flush resources
+    return 1;
 }
 
 static void async_complete(QXLInstance *qin, uint64_t cookie)
@@ -254,7 +271,7 @@ static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
 
 static void set_client_capabilities(QXLInstance *qin,
                                     uint8_t client_present,
-                                    uint8_t caps[SPICE_CAPABILITIES_SIZE])
+                                    uint8_t *caps)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
 }
@@ -263,6 +280,7 @@ static int client_monitors_config(QXLInstance *qin,
                                   VDAgentMonitorsConfig *monitors_config)
 {
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return FALSE;
 }
 
 void initialize_spice_instance(spice_t *s)
@@ -353,6 +371,8 @@ int spice_start(spice_t *s, options_t *options)
         spice_server_destroy(s->server);
         return X11SPICE_ERR_SPICE_INIT_FAILED;
     }
+
+    spice_server_vm_start(s->server);
 
     return 0;
 }

@@ -22,7 +22,12 @@
 #include <stdio.h>
 
 #include <X11/Xlib.h>
+#include <X11/Xutil.h>
 #include <glib.h>
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <string.h>
+
 
 #include "x11spice.h"
 #include "options.h"
@@ -45,11 +50,77 @@ int display_open(display_t *d, options_t *options)
         return X11SPICE_ERR_NODAMAGE;
     }
 
+    if (! XShmQueryExtension(d->xdisplay))
+    {
+        fprintf(stderr, "Error:  XSHM not found on display %s\n", options->display ? options->display : "");
+        return X11SPICE_ERR_NOSHM;
+    }
+
     d->xdamage = XDamageCreate(d->xdisplay, DefaultRootWindow(d->xdisplay), XDamageReportRawRectangles);
 
     g_info("Display %s opened", options->display ? options->display : "");
 
     return 0;
+}
+
+int create_shm_image(display_t *d, shm_image_t *shmi, int w, int h)
+{
+    int scr = DefaultScreen(d->xdisplay);
+    int imgsize;
+
+    shmi->img = XShmCreateImage(d->xdisplay,
+        DefaultVisual(d->xdisplay, scr),
+        DefaultDepth(d->xdisplay, scr),
+        ZPixmap /* FIXME - format we want? */, NULL /* data? */,
+        &shmi->info,
+        w ? w : DisplayWidth(d->xdisplay, scr),
+        h ? h : DisplayHeight(d->xdisplay, scr));
+    if (! shmi->img)
+        return X11SPICE_ERR_NOSHM;
+
+    imgsize = shmi->img->bytes_per_line * shmi->img->height;
+
+    shmi->info.shmid = shmget(IPC_PRIVATE, imgsize, IPC_CREAT | 0700);
+    if (shmi->info.shmid == -1)
+    {
+        g_error("Cannot get shared memory of size %d", imgsize);
+        XDestroyImage(shmi->img);
+        return X11SPICE_ERR_NOSHM;
+    }
+
+    shmi->info.shmaddr = shmi->img->data = shmat(shmi->info.shmid, 0, 0);
+    shmi->info.readOnly = False;
+
+    if (!XShmAttach(d->xdisplay, &shmi->info))
+    {
+        g_error("Failed to attach shared memory");
+        shmdt(shmi->info.shmaddr);
+        shmctl(shmi->info.shmid, IPC_RMID, NULL);
+        XDestroyImage(shmi->img);
+        return X11SPICE_ERR_NOSHM;
+    }
+
+    return 0;
+}
+
+int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
+{
+    if (!XShmGetImage(d->xdisplay, DefaultRootWindow(d->xdisplay), shmi->img,
+            x, y, AllPlanes))
+    {
+        g_error("XShmGetImage from %dx%d into size %dx%d failed",
+            x, y, shmi->img->width, shmi->img->height);
+        return X11SPICE_ERR_NOSHM;
+    }
+    return 0;
+}
+
+void destroy_shm_image(display_t *d, shm_image_t *shmi)
+{
+    XShmDetach(d->xdisplay, &shmi->info);
+    shmdt(shmi->info.shmaddr);
+    shmctl(shmi->info.shmid, IPC_RMID, NULL);
+    XDestroyImage(shmi->img);
 }
 
 void display_close(display_t *d)

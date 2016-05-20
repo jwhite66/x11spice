@@ -30,5 +30,6 @@
 #define X11SPICE_ERR_SPICE_INIT_FAILED  4
 #define X11SPICE_ERR_NODAMAGE           5
 #define X11SPICE_ERR_NOWATCH            6
+#define X11SPICE_ERR_NOSHM              6
 
 #endif
