@@ -36,6 +36,18 @@
 
 int display_open(display_t *d, options_t *options)
 {
+    static int xinitthreads = 0;
+
+    if (!xinitthreads)
+    {
+        if (! XInitThreads())
+        {
+            fprintf(stderr, "Error:  could not initialize X Threads\n");
+            return X11SPICE_ERR_NODISPLAY;
+        }
+        xinitthreads = 1;
+    }
+
     d->xdisplay = XOpenDisplay(options->display);
     // FIXME - do we care? - g_x_error_handler = XSetErrorHandler(handle_xerrors);
     if (! d->xdisplay)
