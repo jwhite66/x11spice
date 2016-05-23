@@ -49,4 +49,5 @@ void session_end(session_t *s);
 
 void *session_pop_draw(void *session_ptr);
 int session_draw_waiting(void *session_ptr);
+void session_handle_key(void *session_ptr, uint8_t keycode, int is_press);
 #endif

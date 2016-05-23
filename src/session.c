@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <X11/Xutil.h>
+#include <X11/extensions/XTest.h>
 
 #include "x11spice.h"
 #include "session.h"
@@ -130,6 +131,10 @@ static void session_handle_xevent(int fd, int event, void *opaque)
         dev->serial, dev->send_event, dev->level, dev->more,
         dev->area.width, dev->area.height, dev->area.x, dev->area.y,
         dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+// FIXME - HACK!
+    dev->area.width = s->display.fullscreen->img->width;
+    dev->area.height = s->display.fullscreen->img->height;
+    dev->area.x = dev->area.y = 0;
     shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
     if (!shmi)
     {
@@ -216,6 +221,15 @@ int session_draw_waiting(void *session_ptr)
     session_t *s = (session_t *) session_ptr;
 
     return g_async_queue_length(s->draw_queue);
+}
+
+void session_handle_key(void *session_ptr, uint8_t keycode, int is_press)
+{
+    int rc;
+    session_t *s = (session_t *) session_ptr;
+    rc = XTestFakeKeyEvent(s->display.xdisplay, keycode, is_press ? True : False, CurrentTime);
+    g_debug("key 0x%x, press %d, rc %d (t %d, f %d)", keycode, is_press, rc, True, False);
+    XFlush(s->display.xdisplay);
 }
 
 int session_start(session_t *s)

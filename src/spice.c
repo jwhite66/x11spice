@@ -302,6 +302,67 @@ static int client_monitors_config(QXLInstance *qin,
     return FALSE;
 }
 
+/* spice sends AT scancodes (with a strange escape).
+ * But xf86PostKeyboardEvent expects scancodes. Apparently most of the time
+ * you just need to add MIN_KEYCODE, see xf86-input-keyboard/src/atKeynames
+ * and xf86-input-keyboard/src/kbd.c:PostKbdEvent:
+ *   xf86PostKeyboardEvent(device, scanCode + MIN_KEYCODE, down); */
+#define MIN_KEYCODE     8
+
+static uint8_t escaped_map[256] = {
+    [0x1c] = 104, //KEY_KP_Enter,
+    [0x1d] = 105, //KEY_RCtrl,
+    [0x2a] = 0,//KEY_LMeta, // REDKEY_FAKE_L_SHIFT
+    [0x35] = 106,//KEY_KP_Divide,
+    [0x36] = 0,//KEY_RMeta, // REDKEY_FAKE_R_SHIFT
+    [0x37] = 107,//KEY_Print,
+    [0x38] = 108,//KEY_AltLang,
+    [0x46] = 127,//KEY_Break,
+    [0x47] = 110,//KEY_Home,
+    [0x48] = 111,//KEY_Up,
+    [0x49] = 112,//KEY_PgUp,
+    [0x4b] = 113,//KEY_Left,
+    [0x4d] = 114,//KEY_Right,
+    [0x4f] = 115,//KEY_End,
+    [0x50] = 116,//KEY_Down,
+    [0x51] = 117,//KEY_PgDown,
+    [0x52] = 118,//KEY_Insert,
+    [0x53] = 119,//KEY_Delete,
+    [0x5b] = 133,//0, // REDKEY_LEFT_CMD,
+    [0x5c] = 134,//0, // REDKEY_RIGHT_CMD,
+    [0x5d] = 135,//KEY_Menu,
+};
+
+static void kbd_push_key(SpiceKbdInstance *sin, uint8_t frag)
+{
+    spice_t *s = SPICE_CONTAINEROF(sin, spice_t, keyboard_sin);
+    int is_down;
+
+    if (frag == 224) {
+        s->escape = frag;
+        return;
+    }
+    is_down = frag & 0x80 ? FALSE : TRUE;
+    frag = frag & 0x7f;
+    if (s->escape == 224) {
+        s->escape = 0;
+        if (escaped_map[frag] == 0) {
+            g_warning("spiceqxl_inputs.c: kbd_push_key: escaped_map[%d] == 0", frag);
+        }
+        frag = escaped_map[frag];
+    } else {
+        frag += MIN_KEYCODE;
+    }
+
+    session_handle_key(s->session_ptr, frag, is_down);
+}
+
+static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
+{
+    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    return 0;
+}
+
 void initialize_spice_instance(spice_t *s)
 {
     static int id = 0;
@@ -347,12 +408,26 @@ void initialize_spice_instance(spice_t *s)
         .set_client_capabilities = set_client_capabilities,
     };
 
+    static const SpiceKbdInterface keyboard_sif = {
+        .base.type          = SPICE_INTERFACE_KEYBOARD,
+        .base.description   = "x11spice keyboard",
+        .base.major_version = SPICE_INTERFACE_KEYBOARD_MAJOR,
+        .base.minor_version = SPICE_INTERFACE_KEYBOARD_MINOR,
+        .push_scan_freg     = kbd_push_key,
+        .get_leds           = kbd_get_leds,
+    };
+
     s->core = &core;
     s->display_sin.base.sif = &display_sif.base;
     s->display_sin.id = id++;
-
     // FIXME - this cast seems dubious to me
     s->display_sin.st = (struct QXLState*) s;
+
+    s->keyboard_sin.base.sif = &keyboard_sif.base;
+
+    // FIXME - this cast seems dubious to me
+    s->keyboard_sin.st = (SpiceKbdState*) s;
+
 }
 
 static void set_options(spice_t *s, options_t *options)
@@ -386,6 +461,12 @@ int spice_start(spice_t *s, options_t *options)
     }
 
     if (spice_server_add_interface(s->server, &s->display_sin.base))
+    {
+        spice_server_destroy(s->server);
+        return X11SPICE_ERR_SPICE_INIT_FAILED;
+    }
+
+    if (spice_server_add_interface(s->server, &s->keyboard_sin.base))
     {
         spice_server_destroy(s->server);
         return X11SPICE_ERR_SPICE_INIT_FAILED;

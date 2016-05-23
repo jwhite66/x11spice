@@ -33,6 +33,10 @@ typedef struct
     SpiceServer *server;
     SpiceCoreInterface *core;
     QXLInstance display_sin;
+
+    SpiceKbdInstance keyboard_sin;
+    uint8_t escape;
+
     QXLWorker *worker;
     int compression_level;
 
