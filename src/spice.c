@@ -363,6 +363,29 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
     return 0;
 }
 
+void tablet_set_logical_size(SpiceTabletInstance* tablet, int width, int height)
+{
+    g_debug("FIXME! UNIMPLEMENTED! %s (width %dx%d)", __func__, width, height);
+}
+
+void tablet_position(SpiceTabletInstance* tablet, int x, int y, uint32_t buttons_state)
+{
+    spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
+    session_handle_mouse_position(s->session_ptr, x, y, buttons_state);
+}
+
+void tablet_wheel(SpiceTabletInstance* tablet, int wheel_motion, uint32_t buttons_state)
+{
+    spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
+    session_handle_mouse_wheel(s->session_ptr, wheel_motion, buttons_state);
+}
+
+void tablet_buttons(SpiceTabletInstance* tablet, uint32_t buttons_state)
+{
+    spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
+    session_handle_mouse_buttons(s->session_ptr, buttons_state);
+}
+
 void initialize_spice_instance(spice_t *s)
 {
     static int id = 0;
@@ -417,16 +440,23 @@ void initialize_spice_instance(spice_t *s)
         .get_leds           = kbd_get_leds,
     };
 
+    static const SpiceTabletInterface tablet_sif = {
+        .base.type          = SPICE_INTERFACE_TABLET,
+        .base.description   = "x11spice tablet",
+        .base.major_version = SPICE_INTERFACE_TABLET_MAJOR,
+        .base.minor_version = SPICE_INTERFACE_TABLET_MINOR,
+        .set_logical_size   = tablet_set_logical_size,
+        .position           = tablet_position,
+        .wheel              = tablet_wheel,
+        .buttons            = tablet_buttons,
+    };
+
     s->core = &core;
     s->display_sin.base.sif = &display_sif.base;
     s->display_sin.id = id++;
-    // FIXME - this cast seems dubious to me
-    s->display_sin.st = (struct QXLState*) s;
 
     s->keyboard_sin.base.sif = &keyboard_sif.base;
-
-    // FIXME - this cast seems dubious to me
-    s->keyboard_sin.st = (SpiceKbdState*) s;
+    s->tablet_sin.base.sif = &tablet_sif.base;
 
 }
 
@@ -446,6 +476,8 @@ static void set_options(spice_t *s, options_t *options)
 
 int spice_start(spice_t *s, options_t *options)
 {
+    memset(s, 0, sizeof(*s));
+
     s->server = spice_server_new();
     if (! s->server)
         return X11SPICE_ERR_SPICE_INIT_FAILED;
@@ -467,6 +499,12 @@ int spice_start(spice_t *s, options_t *options)
     }
 
     if (spice_server_add_interface(s->server, &s->keyboard_sin.base))
+    {
+        spice_server_destroy(s->server);
+        return X11SPICE_ERR_SPICE_INIT_FAILED;
+    }
+
+    if (spice_server_add_interface(s->server, &s->tablet_sin.base))
     {
         spice_server_destroy(s->server);
         return X11SPICE_ERR_SPICE_INIT_FAILED;

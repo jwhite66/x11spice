@@ -37,6 +37,9 @@ typedef struct
     SpiceKbdInstance keyboard_sin;
     uint8_t escape;
 
+    SpiceTabletInstance tablet_sin;
+    uint32_t buttons_state;
+
     QXLWorker *worker;
     int compression_level;
 

@@ -232,6 +232,59 @@ void session_handle_key(void *session_ptr, uint8_t keycode, int is_press)
     XFlush(s->display.xdisplay);
 }
 
+void session_handle_mouse_position(void *session_ptr, int x, int y, uint32_t buttons_state)
+{
+    session_t *s = (session_t *) session_ptr;
+    int scr = DefaultScreen(s->display.xdisplay);
+    XFlush(s->display.xdisplay);
+    g_debug("mouse position: x %d, y %d, buttons 0x%x", x, y, buttons_state);
+    XTestFakeMotionEvent(s->display.xdisplay, scr, x, y, CurrentTime);
+    XFlush(s->display.xdisplay);
+}
+
+#define BUTTONS 5
+static void session_handle_button_change(session_t *s, uint32_t buttons_state)
+{
+    int i;
+    for (i = 0; i < BUTTONS; i++) {
+        if ((buttons_state ^ s->spice.buttons_state) & (1 << i)) {
+            int action = (buttons_state & (1 << i));
+            XTestFakeButtonEvent(s->display.xdisplay, i + 1, action, CurrentTime);
+        }
+    }
+    s->spice.buttons_state = buttons_state;
+    XFlush(s->display.xdisplay);
+}
+
+static uint32_t convert_spice_buttons(int wheel, uint32_t buttons_state)
+{
+    // For some reason spice switches the second and third button, undo that.
+    // basically undo RED_MOUSE_STATE_TO_LOCAL
+    buttons_state = (buttons_state & SPICE_MOUSE_BUTTON_MASK_LEFT) |
+        ((buttons_state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) << 1) |
+        ((buttons_state & SPICE_MOUSE_BUTTON_MASK_RIGHT) >> 1) |
+        (buttons_state & ~(SPICE_MOUSE_BUTTON_MASK_LEFT | SPICE_MOUSE_BUTTON_MASK_MIDDLE
+                          |SPICE_MOUSE_BUTTON_MASK_RIGHT));
+    return buttons_state | (wheel > 0 ? (1<<4) : 0)
+                         | (wheel < 0 ? (1<<3) : 0);
+}
+
+
+void session_handle_mouse_wheel(void *session_ptr, int wheel_motion, uint32_t buttons_state)
+{
+    session_t *s = (session_t *) session_ptr;
+    g_debug("mouse wheel: motion %d, buttons 0x%x", wheel_motion, buttons_state);
+
+    session_handle_button_change(s, convert_spice_buttons(wheel_motion, buttons_state));
+}
+
+void session_handle_mouse_buttons(void *session_ptr, uint32_t buttons_state)
+{
+    session_t *s = (session_t *) session_ptr;
+    g_debug("mouse button: buttons 0x%x", buttons_state);
+    session_handle_button_change(s, convert_spice_buttons(0, buttons_state));
+}
+
 int session_start(session_t *s)
 {
     int rc = 0;

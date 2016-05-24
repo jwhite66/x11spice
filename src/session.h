@@ -50,4 +50,7 @@ void session_end(session_t *s);
 void *session_pop_draw(void *session_ptr);
 int session_draw_waiting(void *session_ptr);
 void session_handle_key(void *session_ptr, uint8_t keycode, int is_press);
+void session_handle_mouse_position(void *session_ptr, int x, int y, uint32_t buttons_state);
+void session_handle_mouse_buttons(void *session_ptr, uint32_t buttons_state);
+void session_handle_mouse_wheel(void *session_ptr, int wheel_motion, uint32_t buttons_state);
 #endif
