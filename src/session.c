@@ -131,10 +131,19 @@ static void session_handle_xevent(int fd, int event, void *opaque)
         dev->serial, dev->send_event, dev->level, dev->more,
         dev->area.width, dev->area.height, dev->area.x, dev->area.y,
         dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
-// FIXME - HACK!
-    dev->area.width = s->display.fullscreen->img->width;
-    dev->area.height = s->display.fullscreen->img->height;
-    dev->area.x = dev->area.y = 0;
+
+    {
+        static int hackme = 0;
+        if (! hackme)
+        {
+            // FIXME - HACK!
+            dev->area.width = s->display.fullscreen->img->width;
+            dev->area.height = s->display.fullscreen->img->height;
+            dev->area.x = dev->area.y = 0;
+            hackme++;
+        }
+    }
+
     shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
     if (!shmi)
     {
