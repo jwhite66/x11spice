@@ -20,35 +20,14 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <X11/Xutil.h>
-#include <X11/extensions/XTest.h>
+
+#include <xcb/xcb.h>
+#include <xcb/xtest.h>
+#include <xcb/xcb_aux.h>
 
 #include "x11spice.h"
 #include "session.h"
 
-
-static void save_ximage_pnm(XImage *img)
-{
-    int x,y;
-    unsigned long pixel;
-    static int count = 0;
-    char fname[200];
-    FILE *fp;
-    sprintf(fname, "ximage%04d.ppm", count++);
-    fp = fopen(fname, "w");
-
-    fprintf(fp,"P3\n%d %d\n255\n",img->width, img->height);
-    for (y=0; y<img->height; y++)
-    {
-        for (x=0; x<img->width; x++)
-        {
-            pixel=XGetPixel(img,x,y);
-            fprintf(fp,"%ld %ld %ld\n",
-                pixel>>16,(pixel&0x00ff00)>>8,pixel&0x0000ff);
-        }
-    }
-    fclose(fp);
-}
 
 static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
 {
@@ -70,8 +49,8 @@ static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
     drawable->clip.type = SPICE_CLIP_TYPE_NONE;
     drawable->bbox.left = x;
     drawable->bbox.top = y;
-    drawable->bbox.right = x + shmi->img->width;
-    drawable->bbox.bottom = y + shmi->img->height;
+    drawable->bbox.right = x + shmi->w;
+    drawable->bbox.bottom = y + shmi->h;
 
     /*
      * surfaces_dest[i] should apparently be filled out with the
@@ -92,17 +71,17 @@ static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
     qxl_image->descriptor.type = SPICE_IMAGE_TYPE_BITMAP;
 
     qxl_image->descriptor.flags = 0;
-    qxl_image->descriptor.width = shmi->img->width;
-    qxl_image->descriptor.height = shmi->img->height;
+    qxl_image->descriptor.width = shmi->w;
+    qxl_image->descriptor.height = shmi->h;
 
     // FIXME - be a bit more dynamic...
     qxl_image->bitmap.format = SPICE_BITMAP_FMT_RGBA;
     qxl_image->bitmap.flags = SPICE_BITMAP_FLAGS_TOP_DOWN | QXL_BITMAP_DIRECT;
-    qxl_image->bitmap.x = shmi->img->width;
-    qxl_image->bitmap.y = shmi->img->height;
-    qxl_image->bitmap.stride = shmi->img->bytes_per_line;
+    qxl_image->bitmap.x = shmi->w;
+    qxl_image->bitmap.y = shmi->h;
+    qxl_image->bitmap.stride = shmi->bytes_per_line;
     qxl_image->bitmap.palette = 0;
-    qxl_image->bitmap.data = (QXLPHYSICAL) shmi->img->data;
+    qxl_image->bitmap.data = (QXLPHYSICAL) shmi->shmaddr;
 
     // FIXME - cache images at all?
 
@@ -112,65 +91,66 @@ static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
 static void session_handle_xevent(int fd, int event, void *opaque)
 {
     session_t *s = (session_t *) opaque;
-    XEvent xev;
-    int rc;
-    XDamageNotifyEvent *dev = (XDamageNotifyEvent *) &xev;;
+    xcb_generic_event_t *ev;
+
     shm_image_t *shmi = NULL;
 
-    rc = XNextEvent(s->display.xdisplay, &xev);
-    if (rc)
-        return;
-
-    if (xev.type != s->display.xd_event_base + XDamageNotify)
+    while ((ev = xcb_poll_for_event(s->display.c)))
     {
-        g_debug("Unexpected X event %d", xev.type);
-        return;
-    }
+        xcb_damage_notify_event_t *dev;
 
-    g_debug("XDamageNotify [ser %ld|send_event %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
-        dev->serial, dev->send_event, dev->level, dev->more,
-        dev->area.width, dev->area.height, dev->area.x, dev->area.y,
-        dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
-
-    {
-        static int hackme = 0;
-        if (! hackme)
+        if (ev->response_type != s->display.damage_ext->first_event + XCB_DAMAGE_NOTIFY)
         {
-            // FIXME - HACK!
-            dev->area.width = s->display.fullscreen->img->width;
-            dev->area.height = s->display.fullscreen->img->height;
-            dev->area.x = dev->area.y = 0;
-            hackme++;
-        }
-    }
-
-    shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
-    if (!shmi)
-    {
-        g_debug("Unexpected failure to create_shm_image of area %dx%d", dev->area.width, dev->area.width);
-        return;
-    }
-
-    if (read_shm_image(&s->display, shmi, dev->area.x, dev->area.y) == 0)
-    {
-        //save_ximage_pnm(shmi.img);
-        QXLDrawable *drawable = shm_image_to_drawable(shmi, dev->area.x, dev->area.y);
-        if (drawable)
-        {
-            g_async_queue_push(s->draw_queue, drawable);
-            spice_qxl_wakeup(&s->spice.display_sin);
-            // FIXME - Note that shmi is not cleaned up at this point
+            g_debug("Unexpected X event %d", ev->response_type);
             return;
         }
+        dev = (xcb_damage_notify_event_t *) ev;
+
+        g_debug("Damage Notify [seq %d|level %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
+            dev->sequence, dev->level,
+            dev->area.width, dev->area.height, dev->area.x, dev->area.y,
+            dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+
+        {
+            static int hackme = 0;
+            if (! hackme)
+            {
+                // FIXME - HACK!
+                dev->area.width = s->display.fullscreen->w;
+                dev->area.height = s->display.fullscreen->h;
+                dev->area.x = dev->area.y = 0;
+                hackme++;
+            }
+        }
+
+        shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
+        if (!shmi)
+        {
+            g_debug("Unexpected failure to create_shm_image of area %dx%d", dev->area.width, dev->area.width);
+            return;
+        }
+
+        if (read_shm_image(&s->display, shmi, dev->area.x, dev->area.y) == 0)
+        {
+            //save_ximage_pnm(shmi.img);
+            QXLDrawable *drawable = shm_image_to_drawable(shmi, dev->area.x, dev->area.y);
+            if (drawable)
+            {
+                g_async_queue_push(s->draw_queue, drawable);
+                spice_qxl_wakeup(&s->spice.display_sin);
+                // FIXME - Note that shmi is not cleaned up at this point
+                return;
+            }
+            else
+                g_debug("Unexpected failure to create drawable");
+        }
         else
-            g_debug("Unexpected failure to create drawable");
+            g_debug("Unexpected failure to read shm of area %dx%d", dev->area.width, dev->area.width);
+
+
+        if (shmi)
+            destroy_shm_image(&s->display, shmi);
     }
-    else
-        g_debug("Unexpected failure to read shm of area %dx%d", dev->area.width, dev->area.width);
-
-
-    if (shmi)
-        destroy_shm_image(&s->display, shmi);
 }
 
 
@@ -179,7 +159,6 @@ static void session_handle_xevent(int fd, int event, void *opaque)
 //         access to the display info if it can.
 static int create_primary(session_t *s)
 {
-    int scr = DefaultScreen(s->display.xdisplay);
     QXLDevSurfaceCreate surface;
 
     s->display.fullscreen = create_shm_image(&s->display, 0, 0);
@@ -187,10 +166,10 @@ static int create_primary(session_t *s)
         return X11SPICE_ERR_NOSHM;
 
     memset(&surface, 0, sizeof(surface));
-    surface.height     = DisplayHeight(s->display.xdisplay, scr);
-    surface.width      = DisplayWidth(s->display.xdisplay, scr);
+    surface.height     = s->display.fullscreen->h;
+    surface.width      = s->display.fullscreen->w;
     // FIXME - negative stride?
-    surface.stride     = s->display.fullscreen->img->bytes_per_line;
+    surface.stride     = s->display.fullscreen->bytes_per_line;
     surface.type       = QXL_SURF_TYPE_PRIMARY;
     surface.flags      = 0;
     surface.group_id   = 0;
@@ -201,7 +180,7 @@ static int create_primary(session_t *s)
 
     // FIXME - compute this dynamically?
     surface.format     = SPICE_SURFACE_FMT_32_xRGB;
-    surface.mem        = (QXLPHYSICAL) s->display.fullscreen->img->data;
+    surface.mem        = (QXLPHYSICAL) s->display.fullscreen->shmaddr;
 
     spice_qxl_create_primary_surface(&s->spice.display_sin, 0, &surface);
 
@@ -234,21 +213,21 @@ int session_draw_waiting(void *session_ptr)
 
 void session_handle_key(void *session_ptr, uint8_t keycode, int is_press)
 {
-    int rc;
     session_t *s = (session_t *) session_ptr;
-    rc = XTestFakeKeyEvent(s->display.xdisplay, keycode, is_press ? True : False, CurrentTime);
-    g_debug("key 0x%x, press %d, rc %d (t %d, f %d)", keycode, is_press, rc, True, False);
-    XFlush(s->display.xdisplay);
+    xcb_test_fake_input(s->display.c, is_press ? XCB_KEY_PRESS : XCB_KEY_RELEASE,
+        keycode, XCB_CURRENT_TIME, XCB_NONE, 0, 0, 0);
+    g_debug("key 0x%x, press %d", keycode, is_press);
+    // FIXME - and maybe a sync too... xcb_flush(s->display.c);
+    xcb_flush(s->display.c);
 }
 
 void session_handle_mouse_position(void *session_ptr, int x, int y, uint32_t buttons_state)
 {
     session_t *s = (session_t *) session_ptr;
-    int scr = DefaultScreen(s->display.xdisplay);
-    XFlush(s->display.xdisplay);
+    xcb_test_fake_input(s->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
+        s->display.screen->root, x, y, 0);
     g_debug("mouse position: x %d, y %d, buttons 0x%x", x, y, buttons_state);
-    XTestFakeMotionEvent(s->display.xdisplay, scr, x, y, CurrentTime);
-    XFlush(s->display.xdisplay);
+    xcb_flush(s->display.c);
 }
 
 #define BUTTONS 5
@@ -258,11 +237,11 @@ static void session_handle_button_change(session_t *s, uint32_t buttons_state)
     for (i = 0; i < BUTTONS; i++) {
         if ((buttons_state ^ s->spice.buttons_state) & (1 << i)) {
             int action = (buttons_state & (1 << i));
-            XTestFakeButtonEvent(s->display.xdisplay, i + 1, action, CurrentTime);
+            xcb_test_fake_input(s->display.c, action ? XCB_BUTTON_PRESS : XCB_BUTTON_RELEASE,
+                i + 1, XCB_CURRENT_TIME, s->display.screen->root, 0, 0, 0);
         }
     }
     s->spice.buttons_state = buttons_state;
-    XFlush(s->display.xdisplay);
 }
 
 static uint32_t convert_spice_buttons(int wheel, uint32_t buttons_state)
@@ -299,7 +278,7 @@ int session_start(session_t *s)
     int rc = 0;
 
     s->spice.session_ptr = s;
-    s->xwatch = s->spice.core->watch_add(ConnectionNumber(s->display.xdisplay),
+    s->xwatch = s->spice.core->watch_add(xcb_get_file_descriptor(s->display.c),
                     SPICE_WATCH_EVENT_READ, session_handle_xevent, s);
     if (! s->xwatch)
         return(X11SPICE_ERR_NOWATCH);
@@ -307,14 +286,14 @@ int session_start(session_t *s)
     s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
     s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
 
-    /* In order for the watch to function,
-        we seem to have to request at least one event */
-    // FIXME - not sure I know why...
-    XPending(s->display.xdisplay);
-
     rc = create_primary(s);
     if (rc)
         session_end(s);
+
+    /* In order for the watch to function,
+        we seem to have to request at least one event */
+    // FIXME - still true with xcb?
+    session_handle_xevent(xcb_get_file_descriptor(s->display.c), 0, s);
 
     return rc;
 }

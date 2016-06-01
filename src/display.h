@@ -21,26 +21,35 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
-#include <X11/Xlib.h>
-#include <X11/extensions/Xdamage.h>
-#include <X11/extensions/XShm.h>
+#include <xcb/xcb.h>
+#include <xcb/damage.h>
+#include <xcb/shm.h>
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct
 {
-    XImage *img;
-    XShmSegmentInfo info;
+    xcb_pixmap_t pid;
+    int shmid;
+    int w;
+    int h;
+    int bytes_per_line;
+    xcb_shm_seg_t shmseg;
+    void *shmaddr;
     void *drawable_ptr;
 }shm_image_t;
 
 typedef struct
 {
-    Display *xdisplay;
-    Damage xdamage;
-    int xd_event_base;
-    int xd_error_base;
+    xcb_connection_t *c;
+    xcb_screen_t *screen;
+
+    const xcb_query_extension_reply_t *damage_ext;
+    xcb_damage_damage_t damage;
+
+    const xcb_query_extension_reply_t *shm_ext;
+
     shm_image_t *fullscreen;
 } display_t;
 

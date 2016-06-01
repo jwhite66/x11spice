@@ -183,7 +183,7 @@ static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
 
     if (++count > 1)
     {
-        g_info("Ignoring worker %d", count);
+        g_message("Ignoring worker %d", count);
         return;
     }
 
