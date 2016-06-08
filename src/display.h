@@ -25,6 +25,9 @@
 #include <xcb/damage.h>
 #include <xcb/shm.h>
 
+
+typedef struct session_struct session_t;
+
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
@@ -51,6 +54,9 @@ typedef struct
     const xcb_query_extension_reply_t *shm_ext;
 
     shm_image_t *fullscreen;
+
+    pthread_t event_thread;
+    session_t *session;
 } display_t;
 
 
@@ -59,6 +65,9 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int display_open(display_t *display, options_t *options);
 void display_close(display_t *display);
+int display_create_fullscreen(display_t *d);
+void display_destroy_fullscreen(display_t *d);
+int display_start_event_thread(display_t *d);
 shm_image_t * create_shm_image(display_t *d, int w, int h);
 int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y);
 void destroy_shm_image(display_t *d, shm_image_t *shmi);

@@ -18,42 +18,43 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef LOCAL_SPICE_H_
-#define LOCAL_SPICE_H_
+#ifndef SCAN_H_
+#define SCAN_H_
 
-#include <spice.h>
 
-#include "options.h"
+/*----------------------------------------------------------------------------
+**  Definitions and simple types
+**--------------------------------------------------------------------------*/
+typedef enum { DAMAGE_SCAN_REPORT, SCANLINE_SCAN_REPORT, HUNCH_SCAN_REPORT, EXIT_SCAN_REPORT } scan_type_t;
 
 typedef struct session_struct session_t;
-
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
+
 typedef struct
 {
-    SpiceServer *server;
-    SpiceCoreInterface *core;
-    QXLInstance display_sin;
+    scan_type_t type;
+    int x;
+    int y;
+    int w;
+    int h;
+} scan_report_t;
 
-    SpiceKbdInstance keyboard_sin;
-    uint8_t escape;
-
-    SpiceTabletInstance tablet_sin;
-    uint32_t buttons_state;
-
-    QXLWorker *worker;
-    int compression_level;
-
+typedef struct
+{
+    pthread_t thread;
+    GAsyncQueue *queue;
     session_t *session;
-} spice_t;
+} scanner_t;
+
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int spice_start(spice_t *s, options_t *options);
-void spice_end(spice_t *s);
-int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shmaddr);
-void spice_destroy_primary(spice_t *s);
+int scanner_create(scanner_t *scanner);
+int scanner_destroy(scanner_t *scanner);
+
+int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int h);
 
 #endif

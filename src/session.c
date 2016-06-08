@@ -27,172 +27,8 @@
 
 #include "x11spice.h"
 #include "session.h"
+#include "scan.h"
 
-
-static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
-{
-    QXLDrawable *drawable;
-    QXLImage *qxl_image;
-    int i;
-
-    drawable = calloc(1, sizeof(*drawable) + sizeof(*qxl_image));
-    if (! drawable)
-        return NULL;
-    qxl_image = (QXLImage *) (drawable + 1);
-
-    drawable->release_info.id = (uint64_t) shmi;
-    shmi->drawable_ptr = drawable;
-
-    drawable->surface_id = 0;
-    drawable->type = QXL_DRAW_COPY;;
-    drawable->effect = QXL_EFFECT_OPAQUE;
-    drawable->clip.type = SPICE_CLIP_TYPE_NONE;
-    drawable->bbox.left = x;
-    drawable->bbox.top = y;
-    drawable->bbox.right = x + shmi->w;
-    drawable->bbox.bottom = y + shmi->h;
-
-    /*
-     * surfaces_dest[i] should apparently be filled out with the
-     * surfaces that we depend on, and surface_rects should be
-     * filled with the rectangles of those surfaces that we
-     * are going to use.
-     *  FIXME - explore this instead of blindly copying...
-     */
-    for (i = 0; i < 3; ++i)
-	drawable->surfaces_dest[i] = -1;
-
-    drawable->u.copy.src_area = drawable->bbox;
-    drawable->u.copy.rop_descriptor = SPICE_ROPD_OP_PUT;
-
-    drawable->u.copy.src_bitmap = (QXLPHYSICAL) qxl_image;
-
-    qxl_image->descriptor.id = 0;
-    qxl_image->descriptor.type = SPICE_IMAGE_TYPE_BITMAP;
-
-    qxl_image->descriptor.flags = 0;
-    qxl_image->descriptor.width = shmi->w;
-    qxl_image->descriptor.height = shmi->h;
-
-    // FIXME - be a bit more dynamic...
-    qxl_image->bitmap.format = SPICE_BITMAP_FMT_RGBA;
-    qxl_image->bitmap.flags = SPICE_BITMAP_FLAGS_TOP_DOWN | QXL_BITMAP_DIRECT;
-    qxl_image->bitmap.x = shmi->w;
-    qxl_image->bitmap.y = shmi->h;
-    qxl_image->bitmap.stride = shmi->bytes_per_line;
-    qxl_image->bitmap.palette = 0;
-    qxl_image->bitmap.data = (QXLPHYSICAL) shmi->shmaddr;
-
-    // FIXME - cache images at all?
-
-    return drawable;
-}
-
-
-static void session_handle_xevent(int fd, int event, void *opaque)
-{
-    session_t *s = (session_t *) opaque;
-    xcb_generic_event_t *ev;
-    int i, n;
-    pixman_box16_t *p;
-
-    shm_image_t *shmi = NULL;
-
-    while ((ev = xcb_poll_for_event(s->display.c)))
-    {
-        xcb_damage_notify_event_t *dev;
-
-        if (ev->response_type != s->display.damage_ext->first_event + XCB_DAMAGE_NOTIFY)
-        {
-            g_debug("Unexpected X event %d", ev->response_type);
-            return;
-        }
-        dev = (xcb_damage_notify_event_t *) ev;
-
-        g_debug("Damage Notify [seq %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
-            dev->sequence, dev->level, dev->level & 0x80,
-            dev->area.width, dev->area.height, dev->area.x, dev->area.y,
-            dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
-
-        pixman_region_union_rect(&s->damage_region, &s->damage_region,
-            dev->area.x, dev->area.y, dev->area.width, dev->area.height);
-
-        if (dev->level & 0x80)
-            continue;
-
-        xcb_damage_subtract(s->display.c, s->display.damage,
-            XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
-
-        p = pixman_region_rectangles(&s->damage_region, &n);
-        for (i = 0; i < n; i++)
-        {
-            shmi = create_shm_image(&s->display, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
-            if (!shmi)
-            {
-                g_debug("Unexpected failure to create_shm_image of area %dx%d", p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
-                return;
-            }
-
-            if (read_shm_image(&s->display, shmi, p[i].x1, p[i].y1) == 0)
-            {
-                //save_ximage_pnm(shmi.img);
-                QXLDrawable *drawable = shm_image_to_drawable(shmi, p[i].x1, p[i].y1);
-                if (drawable)
-                {
-                    g_async_queue_push(s->draw_queue, drawable);
-                    spice_qxl_wakeup(&s->spice.display_sin);
-                    // FIXME - Note that shmi is not cleaned up at this point
-                    return;
-                }
-                else
-                    g_debug("Unexpected failure to create drawable");
-            }
-            else
-                g_debug("Unexpected failure to read shm of area %dx%d", p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
-
-            if (shmi)
-                destroy_shm_image(&s->display, shmi);
-        }
-        pixman_region_clear(&s->damage_region);
-    }
-}
-
-
-// FIXME - this is not really satisfying.  It'd be
-//         nicer over in spice.c.  But spice.c needs
-//         access to the display info if it can.
-static int create_primary(session_t *s)
-{
-    QXLDevSurfaceCreate surface;
-
-    s->display.fullscreen = create_shm_image(&s->display, 0, 0);
-    if (!s->display.fullscreen)
-        return X11SPICE_ERR_NOSHM;
-
-    memset(&surface, 0, sizeof(surface));
-    surface.height     = s->display.fullscreen->h;
-    surface.width      = s->display.fullscreen->w;
-    // FIXME - negative stride?
-    surface.stride     = s->display.fullscreen->bytes_per_line;
-    surface.type       = QXL_SURF_TYPE_PRIMARY;
-    surface.flags      = 0;
-    surface.group_id   = 0;
-    surface.mouse_mode = TRUE;
-
-    // Position appears to be completely unused
-    surface.position   = 0;
-
-    // FIXME - compute this dynamically?
-    surface.format     = SPICE_SURFACE_FMT_32_xRGB;
-    surface.mem        = (QXLPHYSICAL) s->display.fullscreen->shmaddr;
-
-    spice_qxl_create_primary_surface(&s->spice.display_sin, 0, &surface);
-
-    pixman_region_init(&s->damage_region);
-    // FIXME - free that region at exit...
-
-    return 0;
-}
 
 void free_cursor_queue_item(gpointer data)
 {
@@ -204,37 +40,30 @@ void free_draw_queue_item(gpointer data)
     // FIXME
 }
 
-void *session_pop_draw(void *session_ptr)
+void *session_pop_draw(session_t *session)
 {
-    session_t *s = (session_t *) session_ptr;
-
-    return g_async_queue_try_pop(s->draw_queue);
+    return g_async_queue_try_pop(session->draw_queue);
 }
 
-int session_draw_waiting(void *session_ptr)
+int session_draw_waiting(session_t *session)
 {
-    session_t *s = (session_t *) session_ptr;
-
-    return g_async_queue_length(s->draw_queue);
+    return g_async_queue_length(session->draw_queue);
 }
 
-void session_handle_key(void *session_ptr, uint8_t keycode, int is_press)
+void session_handle_key(session_t *session, uint8_t keycode, int is_press)
 {
-    session_t *s = (session_t *) session_ptr;
-    xcb_test_fake_input(s->display.c, is_press ? XCB_KEY_PRESS : XCB_KEY_RELEASE,
+    xcb_test_fake_input(session->display.c, is_press ? XCB_KEY_PRESS : XCB_KEY_RELEASE,
         keycode, XCB_CURRENT_TIME, XCB_NONE, 0, 0, 0);
     g_debug("key 0x%x, press %d", keycode, is_press);
     // FIXME - and maybe a sync too... xcb_flush(s->display.c);
-    xcb_flush(s->display.c);
+    xcb_flush(session->display.c);
 }
 
-void session_handle_mouse_position(void *session_ptr, int x, int y, uint32_t buttons_state)
+void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state)
 {
-    session_t *s = (session_t *) session_ptr;
-    xcb_test_fake_input(s->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
-        s->display.screen->root, x, y, 0);
-    g_debug("mouse position: x %d, y %d, buttons 0x%x", x, y, buttons_state);
-    xcb_flush(s->display.c);
+    xcb_test_fake_input(session->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
+        session->display.screen->root, x, y, 0);
+    xcb_flush(session->display.c);
 }
 
 #define BUTTONS 5
@@ -265,46 +94,75 @@ static uint32_t convert_spice_buttons(int wheel, uint32_t buttons_state)
 }
 
 
-void session_handle_mouse_wheel(void *session_ptr, int wheel_motion, uint32_t buttons_state)
+void session_handle_mouse_wheel(session_t *session, int wheel_motion, uint32_t buttons_state)
 {
-    session_t *s = (session_t *) session_ptr;
     g_debug("mouse wheel: motion %d, buttons 0x%x", wheel_motion, buttons_state);
 
-    session_handle_button_change(s, convert_spice_buttons(wheel_motion, buttons_state));
+    session_handle_button_change(session, convert_spice_buttons(wheel_motion, buttons_state));
 }
 
-void session_handle_mouse_buttons(void *session_ptr, uint32_t buttons_state)
+void session_handle_mouse_buttons(session_t *session, uint32_t buttons_state)
 {
-    session_t *s = (session_t *) session_ptr;
     g_debug("mouse button: buttons 0x%x", buttons_state);
-    session_handle_button_change(s, convert_spice_buttons(0, buttons_state));
+    session_handle_button_change(session, convert_spice_buttons(0, buttons_state));
 }
 
 int session_start(session_t *s)
 {
     int rc = 0;
+    shm_image_t *f;
 
-    s->spice.session_ptr = s;
-    s->xwatch = s->spice.core->watch_add(xcb_get_file_descriptor(s->display.c),
-                    SPICE_WATCH_EVENT_READ, session_handle_xevent, s);
-    if (! s->xwatch)
-        return(X11SPICE_ERR_NOWATCH);
+    s->spice.session = s;
+    s->display.session = s;
+    s->scanner.session = s;
 
-    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
-    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
+    rc = display_create_fullscreen(&s->display);
+    if (rc)
+        return rc;
+    f = s->display.fullscreen;
 
-    rc = create_primary(s);
+    rc = scanner_create(&s->scanner);
+    if (rc)
+        goto end;
+
+    rc = display_start_event_thread(&s->display);
+    if (rc)
+        return rc;
+
+    rc = spice_create_primary(&s->spice, f->w, f->h, f->bytes_per_line, f->shmaddr);
+    if (rc)
+        goto end;
+
+end:
     if (rc)
         session_end(s);
-
     return rc;
 }
 
 void session_end(session_t *s)
 {
-    s->spice.core->watch_remove(s->xwatch);
+    // FIXME - can't always destroy...
+    spice_destroy_primary(&s->spice);
+
+    scanner_destroy(&s->scanner);
+
+    display_destroy_fullscreen(&s->display);
+}
+
+int session_create(session_t *s)
+{
+    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
+    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
+
+    return 0;
+}
+
+void session_destroy(session_t *s)
+{
     if (s->cursor_queue)
         g_async_queue_unref(s->cursor_queue);
     if (s->draw_queue)
         g_async_queue_unref(s->draw_queue);
+    s->cursor_queue = NULL;
+    s->draw_queue = NULL;
 }

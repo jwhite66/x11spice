@@ -31,5 +31,6 @@
 #define X11SPICE_ERR_NODAMAGE           5
 #define X11SPICE_ERR_NOWATCH            6
 #define X11SPICE_ERR_NOSHM              6
+#define X11SPICE_ERR_MALLOC             7
 
 #endif

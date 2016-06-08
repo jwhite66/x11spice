@@ -25,20 +25,18 @@
 #include "display.h"
 #include "local_spice.h"
 #include "gui.h"
-#include <pixman.h>
+#include "scan.h"
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
+typedef struct session_struct
 {
     options_t   options;
     display_t   display;
     spice_t     spice;
     gui_t       gui;
-    SpiceWatch  *xwatch;
-
-    pixman_region16_t damage_region;
+    scanner_t   scanner;
 
     GAsyncQueue *cursor_queue;
     GAsyncQueue *draw_queue;
@@ -47,13 +45,15 @@ typedef struct
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
+int session_create(session_t *s);
+void session_destroy(session_t *s);
 int session_start(session_t *s);
 void session_end(session_t *s);
 
-void *session_pop_draw(void *session_ptr);
-int session_draw_waiting(void *session_ptr);
-void session_handle_key(void *session_ptr, uint8_t keycode, int is_press);
-void session_handle_mouse_position(void *session_ptr, int x, int y, uint32_t buttons_state);
-void session_handle_mouse_buttons(void *session_ptr, uint32_t buttons_state);
-void session_handle_mouse_wheel(void *session_ptr, int wheel_motion, uint32_t buttons_state);
+void *session_pop_draw(session_t *session);
+int session_draw_waiting(session_t *session);
+void session_handle_key(session_t *session, uint8_t keycode, int is_press);
+void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state);
+void session_handle_mouse_buttons(session_t *session, uint32_t buttons_state);
+void session_handle_mouse_wheel(session_t *session, int wheel_motion, uint32_t buttons_state);
 #endif

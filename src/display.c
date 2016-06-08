@@ -29,10 +29,14 @@
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_aux.h>
+#include <pixman.h>
+#include <errno.h>
 
 #include "x11spice.h"
 #include "options.h"
 #include "display.h"
+#include "session.h"
+#include "scan.h"
 
 
 static xcb_screen_t *screen_of_display (xcb_connection_t *c, int screen)
@@ -59,6 +63,58 @@ static int bits_per_pixel(display_t *d)
 
      return 0;
 }
+
+static void * handle_xevents(void *opaque)
+{
+    display_t *display = (display_t *) opaque;
+    xcb_generic_event_t *ev;
+    int i, n;
+    pixman_box16_t *p;
+    pixman_region16_t damage_region;
+
+    pixman_region_init(&damage_region);
+
+    while ((ev = xcb_wait_for_event(display->c)))
+    {
+        xcb_damage_notify_event_t *dev;
+
+        if (ev->response_type != display->damage_ext->first_event + XCB_DAMAGE_NOTIFY)
+        {
+            g_debug("Unexpected X event %d", ev->response_type);
+            continue;;
+        }
+        dev = (xcb_damage_notify_event_t *) ev;
+
+        g_debug("Damage Notify [seq %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
+            dev->sequence, dev->level, dev->level & 0x80,
+            dev->area.width, dev->area.height, dev->area.x, dev->area.y,
+            dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+
+        pixman_region_union_rect(&damage_region, &damage_region,
+            dev->area.x, dev->area.y, dev->area.width, dev->area.height);
+
+        /* The MORE flag is 0x80 on the level field; the proto documentation
+           is wrong on this point.  Check the xorg server code to see */
+        if (dev->level & 0x80)
+            continue;
+
+        xcb_damage_subtract(display->c, display->damage,
+            XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
+
+        p = pixman_region_rectangles(&damage_region, &n);
+
+        for (i = 0; i < n; i++)
+            scanner_push(&display->session->scanner, DAMAGE_SCAN_REPORT,
+                    p[i].x1, p[i].y1, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
+
+        pixman_region_clear(&damage_region);
+    }
+
+    pixman_region_clear(&damage_region);
+
+    return NULL;
+}
+
 
 
 int display_open(display_t *d, options_t *options)
@@ -143,10 +199,13 @@ shm_image_t * create_shm_image(display_t *d, int w, int h)
         shmi->shmaddr = shmat(shmi->shmid, 0, 0);
     if (shmi->shmid == -1 || shmi->shmaddr == (void *) -1)
     {
-        g_error("Cannot get shared memory of size %d", imgsize);
+        g_error("Cannot get shared memory of size %d; errno %d", imgsize, errno);
         free(shmi);
         return NULL;
     }
+    /* We tell shmctl to detach now; that prevents us from holding this
+       shared memory segment forever in case of abnormal process exit. */
+    shmctl(shmi->shmid, IPC_RMID, NULL);
 
     shmi->shmseg = xcb_generate_id(d->c);
     cookie = xcb_shm_attach_checked(d->c, shmi->shmseg, shmi->shmid, 0);
@@ -200,14 +259,37 @@ void destroy_shm_image(display_t *d, shm_image_t *shmi)
         free(shmi->drawable_ptr);
 }
 
-void display_close(display_t *d)
+// FIXME - is this necessary?  And/or can we modify our pushing
+//         to spice to use it?
+int display_create_fullscreen(display_t *d)
 {
-    xcb_damage_destroy(d->c, d->damage);
+    d->fullscreen = create_shm_image(d, 0, 0);
+    if (!d->fullscreen)
+        return X11SPICE_ERR_NOSHM;
+
+    return 0;
+}
+
+void display_destroy_fullscreen(display_t *d)
+{
     if (d->fullscreen)
     {
         destroy_shm_image(d, d->fullscreen);
         d->fullscreen = NULL;
     }
+}
+
+int display_start_event_thread(display_t *d)
+{
+    // FIXME - gthread?
+    return pthread_create(&d->event_thread, NULL, handle_xevents, d);
+}
+
+
+void display_close(display_t *d)
+{
+    xcb_damage_destroy(d->c, d->damage);
+    display_destroy_fullscreen(d);
     xcb_disconnect(d->c);
 }
 

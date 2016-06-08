@@ -9,4 +9,5 @@ x11spice_SOURCES = \
     options.c \
     session.c \
     spice.c \
+    scan.c \
     main.c

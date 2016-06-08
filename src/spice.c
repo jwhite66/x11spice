@@ -224,7 +224,7 @@ static int get_command(QXLInstance *qin, struct QXLCommandExt *cmd)
     spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
     QXLDrawable *drawable;
 
-    drawable = session_pop_draw(s->session_ptr);
+    drawable = session_pop_draw(s->session);
     if (! drawable)
         return 0;
 
@@ -241,7 +241,7 @@ static int req_cmd_notification(QXLInstance *qin)
 {
     spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
 
-    if (session_draw_waiting(s->session_ptr) > 0)
+    if (session_draw_waiting(s->session) > 0)
         return 0;
 
     return 1;
@@ -354,7 +354,7 @@ static void kbd_push_key(SpiceKbdInstance *sin, uint8_t frag)
         frag += MIN_KEYCODE;
     }
 
-    session_handle_key(s->session_ptr, frag, is_down);
+    session_handle_key(s->session, frag, is_down);
 }
 
 static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
@@ -371,19 +371,50 @@ void tablet_set_logical_size(SpiceTabletInstance* tablet, int width, int height)
 void tablet_position(SpiceTabletInstance* tablet, int x, int y, uint32_t buttons_state)
 {
     spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
-    session_handle_mouse_position(s->session_ptr, x, y, buttons_state);
+    session_handle_mouse_position(s->session, x, y, buttons_state);
 }
 
 void tablet_wheel(SpiceTabletInstance* tablet, int wheel_motion, uint32_t buttons_state)
 {
     spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
-    session_handle_mouse_wheel(s->session_ptr, wheel_motion, buttons_state);
+    session_handle_mouse_wheel(s->session, wheel_motion, buttons_state);
 }
 
 void tablet_buttons(SpiceTabletInstance* tablet, uint32_t buttons_state)
 {
     spice_t *s = SPICE_CONTAINEROF(tablet, spice_t, tablet_sin);
-    session_handle_mouse_buttons(s->session_ptr, buttons_state);
+    session_handle_mouse_buttons(s->session, buttons_state);
+}
+
+int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shmaddr)
+{
+    QXLDevSurfaceCreate surface;
+
+    memset(&surface, 0, sizeof(surface));
+    surface.height     = h;
+    surface.width      = w;
+    // FIXME - negative stride?
+    surface.stride     = bytes_per_line;
+    surface.type       = QXL_SURF_TYPE_PRIMARY;
+    surface.flags      = 0;
+    surface.group_id   = 0;
+    surface.mouse_mode = TRUE;
+
+    // Position appears to be completely unused
+    surface.position   = 0;
+
+    // FIXME - compute this dynamically?
+    surface.format     = SPICE_SURFACE_FMT_32_xRGB;
+    surface.mem        = (QXLPHYSICAL) shmaddr;
+
+    spice_qxl_create_primary_surface(&s->display_sin, 0, &surface);
+
+    return 0;
+}
+
+void spice_destroy_primary(spice_t *s)
+{
+    spice_qxl_destroy_primary_surface(&s->display_sin, 0);
 }
 
 void initialize_spice_instance(spice_t *s)

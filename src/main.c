@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
 
     int         display_opened = 0;
     int         spice_started = 0;
+    int         session_created = 0;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
@@ -47,11 +48,20 @@ int main(int argc, char *argv[])
     options_from_config(&session.options);
 
     /*------------------------------------------------------------------------
+    **  Create the session
+    **----------------------------------------------------------------------*/
+    rc = session_create(&session);
+    if (rc)
+        goto exit;
+    session_created = 1;
+
+    /*------------------------------------------------------------------------
     **  Open the display
     **----------------------------------------------------------------------*/
     rc = display_open(&session.display, &session.options);
     if (rc)
         goto exit;
+    session.display.session = &session;
     display_opened = 1;
 
     /*------------------------------------------------------------------------
@@ -70,7 +80,8 @@ int main(int argc, char *argv[])
     spice_started = 1;
 
     /*------------------------------------------------------------------------
-    **  Leave the GUI running until we have a reason to quit
+    **  Start our session and leave the GUI running until we have
+    **   a reason to quit
     **----------------------------------------------------------------------*/
     rc = session_start(&session);
     if (rc)
@@ -90,6 +101,9 @@ exit:
         display_close(&session.display);
 
     options_free(&session.options);
+
+    if (session_created)
+        session_destroy(&session);
 
     return rc;
 }
