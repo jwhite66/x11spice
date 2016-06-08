@@ -153,6 +153,7 @@ static void session_handle_xevent(int fd, int event, void *opaque)
             if (shmi)
                 destroy_shm_image(&s->display, shmi);
         }
+        pixman_region_clear(&s->damage_region);
     }
 }
 
