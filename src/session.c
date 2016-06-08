@@ -88,10 +88,13 @@ static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
     return drawable;
 }
 
+
 static void session_handle_xevent(int fd, int event, void *opaque)
 {
     session_t *s = (session_t *) opaque;
     xcb_generic_event_t *ev;
+    int i, n;
+    pixman_box16_t *p;
 
     shm_image_t *shmi = NULL;
 
@@ -106,50 +109,50 @@ static void session_handle_xevent(int fd, int event, void *opaque)
         }
         dev = (xcb_damage_notify_event_t *) ev;
 
-        g_debug("Damage Notify [seq %d|level %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
-            dev->sequence, dev->level,
+        g_debug("Damage Notify [seq %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
+            dev->sequence, dev->level, dev->level & 0x80,
             dev->area.width, dev->area.height, dev->area.x, dev->area.y,
             dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
 
-        {
-            static int hackme = 0;
-            if (! hackme)
-            {
-                // FIXME - HACK!
-                dev->area.width = s->display.fullscreen->w;
-                dev->area.height = s->display.fullscreen->h;
-                dev->area.x = dev->area.y = 0;
-                hackme++;
-            }
-        }
+        pixman_region_union_rect(&s->damage_region, &s->damage_region,
+            dev->area.x, dev->area.y, dev->area.width, dev->area.height);
 
-        shmi = create_shm_image(&s->display, dev->area.width, dev->area.height);
-        if (!shmi)
-        {
-            g_debug("Unexpected failure to create_shm_image of area %dx%d", dev->area.width, dev->area.width);
-            return;
-        }
+        if (dev->level & 0x80)
+            continue;
 
-        if (read_shm_image(&s->display, shmi, dev->area.x, dev->area.y) == 0)
+        xcb_damage_subtract(s->display.c, s->display.damage,
+            XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
+
+        p = pixman_region_rectangles(&s->damage_region, &n);
+        for (i = 0; i < n; i++)
         {
-            //save_ximage_pnm(shmi.img);
-            QXLDrawable *drawable = shm_image_to_drawable(shmi, dev->area.x, dev->area.y);
-            if (drawable)
+            shmi = create_shm_image(&s->display, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
+            if (!shmi)
             {
-                g_async_queue_push(s->draw_queue, drawable);
-                spice_qxl_wakeup(&s->spice.display_sin);
-                // FIXME - Note that shmi is not cleaned up at this point
+                g_debug("Unexpected failure to create_shm_image of area %dx%d", p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
                 return;
             }
+
+            if (read_shm_image(&s->display, shmi, p[i].x1, p[i].y1) == 0)
+            {
+                //save_ximage_pnm(shmi.img);
+                QXLDrawable *drawable = shm_image_to_drawable(shmi, p[i].x1, p[i].y1);
+                if (drawable)
+                {
+                    g_async_queue_push(s->draw_queue, drawable);
+                    spice_qxl_wakeup(&s->spice.display_sin);
+                    // FIXME - Note that shmi is not cleaned up at this point
+                    return;
+                }
+                else
+                    g_debug("Unexpected failure to create drawable");
+            }
             else
-                g_debug("Unexpected failure to create drawable");
+                g_debug("Unexpected failure to read shm of area %dx%d", p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
+
+            if (shmi)
+                destroy_shm_image(&s->display, shmi);
         }
-        else
-            g_debug("Unexpected failure to read shm of area %dx%d", dev->area.width, dev->area.width);
-
-
-        if (shmi)
-            destroy_shm_image(&s->display, shmi);
     }
 }
 
@@ -183,6 +186,9 @@ static int create_primary(session_t *s)
     surface.mem        = (QXLPHYSICAL) s->display.fullscreen->shmaddr;
 
     spice_qxl_create_primary_surface(&s->spice.display_sin, 0, &surface);
+
+    pixman_region_init(&s->damage_region);
+    // FIXME - free that region at exit...
 
     return 0;
 }

@@ -25,6 +25,7 @@
 #include "display.h"
 #include "local_spice.h"
 #include "gui.h"
+#include <pixman.h>
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
@@ -36,6 +37,8 @@ typedef struct
     spice_t     spice;
     gui_t       gui;
     SpiceWatch  *xwatch;
+
+    pixman_region16_t damage_region;
 
     GAsyncQueue *cursor_queue;
     GAsyncQueue *draw_queue;
