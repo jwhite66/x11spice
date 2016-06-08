@@ -296,11 +296,6 @@ int session_start(session_t *s)
     if (rc)
         session_end(s);
 
-    /* In order for the watch to function,
-        we seem to have to request at least one event */
-    // FIXME - still true with xcb?
-    session_handle_xevent(xcb_get_file_descriptor(s->display.c), 0, s);
-
     return rc;
 }
 
