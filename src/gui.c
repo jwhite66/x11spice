@@ -21,7 +21,7 @@
 #include "gui.h"
 #include "x11spice.h"
 
-int gui_init(gui_t *gui, int argc, char *argv[])
+int gui_create(gui_t *gui, int argc, char *argv[])
 {
     if (! gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
@@ -36,4 +36,11 @@ int gui_init(gui_t *gui, int argc, char *argv[])
 void gui_run(gui_t *gui)
 {
     gtk_main();
+}
+
+void gui_destroy(gui_t *gui)
+{
+    if (gui->window)
+        gtk_widget_destroy(gui->window);
+    gui->window = NULL;
 }

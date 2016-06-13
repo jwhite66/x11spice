@@ -36,7 +36,9 @@ int main(int argc, char *argv[])
 
     int         display_opened = 0;
     int         spice_started = 0;
+    int         gui_created = 0;
     int         session_created = 0;
+    int         session_started = 0;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
@@ -67,9 +69,10 @@ int main(int argc, char *argv[])
     /*------------------------------------------------------------------------
     **  Initialize the GUI
     **----------------------------------------------------------------------*/
-    rc = gui_init(&session.gui, argc, argv);
+    rc = gui_create(&session.gui, argc, argv);
     if (rc)
         goto exit;
+    gui_created = 1;
 
     /*------------------------------------------------------------------------
     **  Start up a spice server
@@ -86,16 +89,22 @@ int main(int argc, char *argv[])
     rc = session_start(&session);
     if (rc)
         goto exit;
+    session_started = 1;
 
     gui_run(&session.gui);
-    session_end(&session);
 
     /*------------------------------------------------------------------------
     **  Clean up, go home
     **----------------------------------------------------------------------*/
 exit:
+    if (session_started)
+        session_end(&session);
+
     if (spice_started)
         spice_end(&session.spice);
+
+    if (gui_created)
+        gui_destroy(&session.gui);
 
     if (display_opened)
         display_close(&session.display);
