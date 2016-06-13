@@ -33,7 +33,6 @@ typedef struct session_struct session_t;
 **--------------------------------------------------------------------------*/
 typedef struct
 {
-    xcb_pixmap_t pid;
     int shmid;
     int w;
     int h;

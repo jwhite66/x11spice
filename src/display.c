@@ -217,17 +217,6 @@ shm_image_t * create_shm_image(display_t *d, int w, int h)
         return NULL;
     }
 
-    shmi->pid = xcb_generate_id(d->c);
-    cookie = xcb_shm_create_pixmap_checked(d->c, shmi->pid, d->screen->root,
-            shmi->w, shmi->h, d->screen->root_depth, shmi->shmseg, 0);
-    error = xcb_request_check(d->c, cookie);
-    if (error)
-    {
-        g_error("Could not create pixmap; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
-        return NULL;
-    }
-
     return shmi;
 }
 
@@ -251,7 +240,6 @@ int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
 
 void destroy_shm_image(display_t *d, shm_image_t *shmi)
 {
-    xcb_free_pixmap(d->c, shmi->pid);
     xcb_shm_detach(d->c, shmi->shmseg);
     shmdt(shmi->shmaddr);
     shmctl(shmi->shmid, IPC_RMID, NULL);
