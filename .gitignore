@@ -18,3 +18,9 @@ Makefile.in
 src/x11spice
 config.guess
 config.sub
+test-driver
+src/tests/run
+
+*.log
+*.trs
+x11spice_test
