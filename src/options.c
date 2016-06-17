@@ -98,7 +98,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     int rc;
     int longindex = 0;
 
-    enum option_types {  OPTION_VIEWONLY, OPTION_TIMEOUT, OPTION_HIDE,
+    enum option_types {  OPTION_VIEWONLY, OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
                          OPTION_GENERATE_PASSCODE, OPTION_DISPLAY, OPTION_MINIMIZE,
                          OPTION_HELP
     };
@@ -107,6 +107,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     {
         {"viewonly",                 0, 0,       OPTION_VIEWONLY },
         {"timeout",                  1, 0,       OPTION_TIMEOUT  },
+        {"auto",                     1, 0,       OPTION_AUTO },
         {"hide",                     0, 0,       OPTION_HIDE },
         {"generate-passcode",        0, 0,       OPTION_GENERATE_PASSCODE},
         {"display",                  1, 0,       OPTION_DISPLAY },
@@ -136,6 +137,10 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
             case OPTION_HIDE:
                 options->hide = 1;
+                break;
+
+            case OPTION_AUTO:
+                options->autouri = strdup(optarg);
                 break;
 
             case OPTION_MINIMIZE:

@@ -5,6 +5,7 @@ AM_CFLAGS = -Wall $(ALL_XCB_CFLAGS) $(GTK2_CFLAGS) $(SPICE_CFLAGS) $(SPICE_PROTO
 x11spice_LDADD = $(ALL_XCB_LIBS) $(GTK2_LIBS) $(SPICE_LIBS) $(GLIB2_LIBS) $(PIXMAN_LIBS)
 x11spice_SOURCES = \
     display.c \
+    auto.c \
     gui.c \
     options.c \
     session.c \

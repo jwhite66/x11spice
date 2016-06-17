@@ -27,6 +27,7 @@
 #include "x11spice.h"
 #include "display.h"
 #include "session.h"
+#include "auto.h"
 
 struct SpiceTimer {
     SpiceTimerFunc func;
@@ -496,13 +497,26 @@ static void set_options(spice_t *s, options_t *options)
     if (options->disable_ticketing)
         spice_server_set_noauth(s->server);
 
-    spice_server_set_addr(s->server, options->spice_addr ?
-            options->spice_addr : "", 0);
-    if (options->spice_port)
-        spice_server_set_port(s->server, options->spice_port);
+    if (! options->autouri)
+    {
+        spice_server_set_addr(s->server, options->spice_addr ?
+                options->spice_addr : "", 0);
+        if (options->spice_port)
+            spice_server_set_port(s->server, options->spice_port);
+    }
 
     if (options->spice_password)
         spice_server_set_ticket(s->server, options->spice_password, 0, 0, 0);
+}
+
+static int try_auto(spice_t *s, options_t *options)
+{
+    int fd;
+    fd = auto_listen(options->autouri);
+    if (fd < 0)
+        return X11SPICE_ERR_AUTO_FAILED;
+
+    return spice_server_set_listen_socket_fd(s->server, fd);
 }
 
 int spice_start(spice_t *s, options_t *options)
@@ -516,6 +530,13 @@ int spice_start(spice_t *s, options_t *options)
     initialize_spice_instance(s);
 
     set_options(s, options);
+
+    if (options->autouri)
+    {
+        int rc = try_auto(s, options);
+        if (rc)
+            return rc;
+    }
 
     if (spice_server_init(s->server, s->core) < 0)
     {

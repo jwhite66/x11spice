@@ -30,6 +30,7 @@ typedef struct
     int  minimize;
     int  hide;
     char *display;
+    char *autouri;
 
     char *spice_addr;
     int  spice_port;

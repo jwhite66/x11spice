@@ -18,21 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef X11SPICE_H_
-#define X11SPICE_H_
+#ifndef AUTO_H_
+#define AUTO_H_
+
 
 /*----------------------------------------------------------------------------
-** Constant definitions
+**  Prototypes
 **--------------------------------------------------------------------------*/
-#define X11SPICE_ERR_BADARGS            1
-#define X11SPICE_ERR_NODISPLAY          2
-#define X11SPICE_ERR_GTK_FAILED         3
-#define X11SPICE_ERR_SPICE_INIT_FAILED  4
-#define X11SPICE_ERR_NODAMAGE           5
-#define X11SPICE_ERR_NOWATCH            6
-#define X11SPICE_ERR_NOSHM              6
-#define X11SPICE_ERR_MALLOC             7
-#define X11SPICE_ERR_PARSE              8
-#define X11SPICE_ERR_AUTO_FAILED        9
+int auto_listen(char *auto_spec);
 
 #endif
