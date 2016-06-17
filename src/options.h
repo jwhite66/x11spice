@@ -27,6 +27,8 @@
 typedef struct
 {
     long timeout;
+    int  minimize;
+    int  hide;
     char *display;
 
     char *spice_addr;
