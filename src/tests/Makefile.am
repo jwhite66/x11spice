@@ -12,3 +12,6 @@ x11spice_test_SOURCES = \
     main.c
 
 noinst_PROGRAMS = $(TESTS)
+
+leakcheck.log: 
+	VALGRIND="valgrind --leak-check=full --log-file=leakcheck.log" make check

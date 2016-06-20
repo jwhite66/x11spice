@@ -33,13 +33,17 @@
 
 static int exec_x11spice(x11spice_server_t *server, gchar *display)
 {
-    char buf[256];
+    char buf[4096];
+    char *valgrind = getenv("VALGRIND");
 
     /* Redirect stderr and stdout to our pipe */
     dup2(server->pipe, fileno(stdout));
     dup2(server->pipe, fileno(stderr));
 
-    snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide", display);
+    if (valgrind)
+        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s --auto localhost:5900-5999 --hide", valgrind, display);
+    else
+        snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide", display);
 
     return execl("/bin/sh", "sh", "-c", buf, NULL);
 
