@@ -58,6 +58,7 @@ static gchar * string_option(GKeyFile *u, GKeyFile *s, const gchar *section, con
         ret = g_key_file_get_string(u, section, key, &error);
     if ((! u || error) && s)
         ret = g_key_file_get_string(s, section, key, NULL);
+    g_error_free(error);
 
     return ret;
 }
@@ -71,6 +72,7 @@ static gint int_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gch
         ret = g_key_file_get_integer(u, section, key, &error);
     if ((! u || error) && s)
         ret = g_key_file_get_integer(s, section, key, NULL);
+    g_error_free(error);
 
     return ret;
 }
@@ -84,6 +86,7 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
         ret = g_key_file_get_boolean(u, section, key, &error);
     if ((! u || error) && s)
         ret = g_key_file_get_boolean(s, section, key, NULL);
+    g_error_free(error);
 
     return ret;
 }
@@ -181,6 +184,10 @@ void options_from_config(options_t *options)
     options->spice_port = int_option(userkey, systemkey, "spice", "port");
     options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable_ticketing");
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit_on_disconnect");
+
+    g_free(user_config_file);
+    g_key_file_free(systemkey);
+    g_key_file_free(userkey);
 
     g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr, options->disable_ticketing, options->spice_port);
 }
