@@ -37,6 +37,7 @@ typedef struct session_struct
     spice_t     spice;
     gui_t       gui;
     scanner_t   scanner;
+    int         running;
 
     GAsyncQueue *cursor_queue;
     GAsyncQueue *draw_queue;
@@ -49,6 +50,7 @@ int session_create(session_t *s);
 void session_destroy(session_t *s);
 int session_start(session_t *s);
 void session_end(session_t *s);
+int session_alive(session_t *s);
 
 void *session_pop_draw(session_t *session);
 int session_draw_waiting(session_t *session);

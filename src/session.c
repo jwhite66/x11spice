@@ -42,11 +42,17 @@ void free_draw_queue_item(gpointer data)
 
 void *session_pop_draw(session_t *session)
 {
+    if (! session || ! session->running)
+        return NULL;
+
     return g_async_queue_try_pop(session->draw_queue);
 }
 
 int session_draw_waiting(session_t *session)
 {
+    if (! session || ! session->running)
+        return 0;
+
     return g_async_queue_length(session->draw_queue);
 }
 
@@ -110,16 +116,10 @@ void session_handle_mouse_buttons(session_t *session, uint32_t buttons_state)
 int session_start(session_t *s)
 {
     int rc = 0;
-    shm_image_t *f;
 
     s->spice.session = s;
     s->display.session = s;
     s->scanner.session = s;
-
-    rc = display_create_fullscreen(&s->display);
-    if (rc)
-        return rc;
-    f = s->display.fullscreen;
 
     rc = scanner_create(&s->scanner);
     if (rc)
@@ -129,9 +129,7 @@ int session_start(session_t *s)
     if (rc)
         return rc;
 
-    rc = spice_create_primary(&s->spice, f->w, f->h, f->bytes_per_line, f->shmaddr);
-    if (rc)
-        goto end;
+    s->running = 1;
 
 end:
     if (rc)
@@ -141,8 +139,7 @@ end:
 
 void session_end(session_t *s)
 {
-    // FIXME - can't always destroy...
-    spice_destroy_primary(&s->spice);
+    s->running = 0;
 
     scanner_destroy(&s->scanner);
 
@@ -165,4 +162,9 @@ void session_destroy(session_t *s)
         g_async_queue_unref(s->draw_queue);
     s->cursor_queue = NULL;
     s->draw_queue = NULL;
+}
+
+int session_alive(session_t *s)
+{
+    return s->running;
 }

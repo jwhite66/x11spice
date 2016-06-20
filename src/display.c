@@ -74,6 +74,7 @@ static void * handle_xevents(void *opaque)
 
     pixman_region_init(&damage_region);
 
+    // FIXME - we do not have a good way to cause this thread to exit gracefully
     while ((ev = xcb_wait_for_event(display->c)))
     {
         xcb_damage_notify_event_t *dev;
@@ -108,6 +109,9 @@ static void * handle_xevents(void *opaque)
                     p[i].x1, p[i].y1, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
 
         pixman_region_clear(&damage_region);
+
+        if (display->session && ! session_alive(display->session))
+            break;
     }
 
     pixman_region_clear(&damage_region);
@@ -120,6 +124,7 @@ static void * handle_xevents(void *opaque)
 int display_open(display_t *d, options_t *options)
 {
     int scr;
+    int rc;
     xcb_damage_query_version_cookie_t dcookie;
 
     xcb_void_cookie_t cookie;
@@ -172,9 +177,11 @@ int display_open(display_t *d, options_t *options)
         return X11SPICE_ERR_NOSHM;
     }
 
+    rc = display_create_fullscreen(d);
+
     g_message("Display %s opened", options->display ? options->display : "");
 
-    return 0;
+    return rc;
 }
 
 shm_image_t * create_shm_image(display_t *d, int w, int h)

@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
     /*------------------------------------------------------------------------
     **  Start up a spice server
     **----------------------------------------------------------------------*/
-    rc = spice_start(&session.spice, &session.options);
+    rc = spice_start(&session.spice, &session.options, session.display.fullscreen);
     if (rc)
         goto exit;
     spice_started = 1;

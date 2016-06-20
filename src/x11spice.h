@@ -34,5 +34,6 @@
 #define X11SPICE_ERR_MALLOC             7
 #define X11SPICE_ERR_PARSE              8
 #define X11SPICE_ERR_AUTO_FAILED        9
+#define X11SPICE_ERR_SHUTTING_DOWN     10
 
 #endif

@@ -519,8 +519,10 @@ static int try_auto(spice_t *s, options_t *options)
     return spice_server_set_listen_socket_fd(s->server, fd);
 }
 
-int spice_start(spice_t *s, options_t *options)
+int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen)
 {
+    int rc;
+
     memset(s, 0, sizeof(*s));
 
     s->server = spice_server_new();
@@ -564,10 +566,16 @@ int spice_start(spice_t *s, options_t *options)
 
     spice_server_vm_start(s->server);
 
-    return 0;
+    rc = spice_create_primary(s, fullscreen->w, fullscreen->h,
+                                 fullscreen->bytes_per_line, fullscreen->shmaddr);
+
+    return rc;
 }
 
 void spice_end(spice_t *s)
 {
     spice_server_destroy(s->server);
+
+    // FIXME - can't always destroy...
+    spice_destroy_primary(s);
 }

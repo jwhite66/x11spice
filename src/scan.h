@@ -46,6 +46,7 @@ typedef struct
     pthread_t thread;
     GAsyncQueue *queue;
     session_t *session;
+    GMutex  lock;
 } scanner_t;
 
 

@@ -158,10 +158,15 @@ static void handle_damage_report(session_t *session, scan_report_t *r)
 }
 
 
+static void free_queue_item(gpointer data)
+{
+    free(data);
+}
+
 static void * scanner_run(void *opaque)
 {
     scanner_t *scanner = (scanner_t *) opaque;
-    while (1)
+    while (session_alive(scanner->session))
     {
         scan_report_t *r;
         r = (scan_report_t *) g_async_queue_timeout_pop(scanner->queue, get_timeout(scanner));
@@ -171,6 +176,7 @@ static void * scanner_run(void *opaque)
         switch(r->type)
         {
             case EXIT_SCAN_REPORT:
+                free_queue_item(r);
                 return 0;
 
             case DAMAGE_SCAN_REPORT:
@@ -179,20 +185,17 @@ static void * scanner_run(void *opaque)
 
             // FIXME - implement hint + scan
         }
+        free_queue_item(r);
     }
 
     return 0;
 }
 
-static void free_queue_item(gpointer data)
-{
-    free(data);
-    // FIXME - test this...
-}
 
 int scanner_create(scanner_t *scanner)
 {
     scanner->queue = g_async_queue_new_full(free_queue_item);
+    g_mutex_init(&scanner->lock);
     // FIXME - gthread?
     return pthread_create(&scanner->thread, NULL, scanner_run, scanner);
 }
@@ -207,18 +210,22 @@ int scanner_destroy(scanner_t *scanner)
     if (rc == 0)
         rc = (int) (long) err;
 
+    g_mutex_lock(&scanner->lock);
     if (scanner->queue)
     {
         g_async_queue_unref(scanner->queue);
         scanner->queue = NULL;
     }
+    g_mutex_unlock(&scanner->lock);
 
     return rc;
 }
 
 int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int h)
 {
+    int rc = X11SPICE_ERR_MALLOC;
     scan_report_t *r = malloc(sizeof(*r));
+
     if (r)
     {
         r->type = type;
@@ -226,9 +233,20 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
         r->y = y;
         r->w = w;
         r->h = h;
-        g_async_queue_push(scanner->queue, r);
-        return 0;
+
+        g_mutex_lock(&scanner->lock);
+        if (scanner->queue)
+        {
+            g_async_queue_push(scanner->queue, r);
+            rc = 0;
+        }
+        else
+        {
+            free(r);
+            rc = X11SPICE_ERR_SHUTTING_DOWN;
+        }
+        g_mutex_unlock(&scanner->lock);
     }
-    return X11SPICE_ERR_MALLOC;
+    return rc;
 }
 
