@@ -1,3 +1,4 @@
+#This creates a make check-code-coverage target
 @CODE_COVERAGE_RULES@
 
 bin_PROGRAMS = x11spice
