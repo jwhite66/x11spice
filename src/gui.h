@@ -35,6 +35,7 @@ typedef struct
 **  Prototypes
 **--------------------------------------------------------------------------*/
 int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden);
+void gui_sigterm(void);
 void gui_run(gui_t *gui);
 void gui_destroy(gui_t *gui);
 

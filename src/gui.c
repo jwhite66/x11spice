@@ -21,13 +21,21 @@
 #include "gui.h"
 #include "x11spice.h"
 
+gui_t *cached_gui;
+void gui_sigterm(void)
+{
+    if (cached_gui)
+        gtk_main_quit();
+    cached_gui = NULL;
+}
+
 int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 {
     if (! gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
 
     gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    g_signal_connect(gui->window, "destroy", G_CALLBACK(gtk_main_quit), NULL);
+    g_signal_connect(gui->window, "destroy", G_CALLBACK(gui_sigterm), NULL);
     if (! hidden)
         gtk_widget_show(gui->window);
     if (minimize)
@@ -38,7 +46,9 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 
 void gui_run(gui_t *gui)
 {
+    cached_gui = gui;
     gtk_main();
+    cached_gui = NULL;
 }
 
 void gui_destroy(gui_t *gui)

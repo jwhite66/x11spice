@@ -20,6 +20,7 @@
 
 
 #include <stdio.h>
+#include <signal.h>
 
 #include "x11spice.h"
 #include "options.h"
@@ -27,6 +28,19 @@
 #include "display.h"
 #include "gui.h"
 #include "session.h"
+
+
+static void sigterm_handler(int arg)
+{
+    gui_sigterm();
+}
+
+static void handle_sigterm(void)
+{
+    struct sigaction act = {};
+    act.sa_handler = sigterm_handler;
+    sigaction(SIGTERM, &act, NULL);
+}
 
 int main(int argc, char *argv[])
 {
@@ -90,6 +104,8 @@ int main(int argc, char *argv[])
     if (rc)
         goto exit;
     session_started = 1;
+
+    handle_sigterm();
 
     gui_run(&session.gui);
 
