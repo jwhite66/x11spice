@@ -31,35 +31,17 @@
 #include "x11spice_test.h"
 
 
-static char **duplicate_environment(void)
-{
-    extern char **environ;
-    char **p;
-    int i;
-
-    for (i = 0, p = environ; *p; p++)
-        i++;
-
-    p = malloc((i + 1 + 1 ) * sizeof(*p));
-    memcpy(p + 1, environ, (i + 1) * sizeof(*p));
-
-    return p;
-}
-
 static int exec_x11spice(x11spice_server_t *server, gchar *display)
 {
     char buf[256];
-
-    char **env = duplicate_environment();
 
     /* Redirect stderr and stdout to our pipe */
     dup2(server->pipe, fileno(stdout));
     dup2(server->pipe, fileno(stderr));
 
-    snprintf(buf, sizeof(buf), "DISPLAY=:%s", display);
-    *env = buf;
+    snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide", display);
 
-    return execle("../x11spice", "x11spice", "--auto", "localhost:5900-5999", "--hide", NULL, env);
+    return execl("/bin/sh", "sh", "-c", buf, NULL);
 
     return -1;
 }
@@ -100,7 +82,6 @@ static int get_a_line(char *buf, int len, x11spice_server_t *server)
             {
                 server->uri = g_memdup(buf + 4, p - buf - 4 + 1);
                 server->uri[p - buf - 4] = '\0';
-printf("JPW got [%*.*s]\n", (int) (p - buf - 4), (int) (p - buf - 4), server->uri);
                 return len;
             }
             return p - buf + 1;
@@ -128,7 +109,7 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
         close(fd[0]);
         server->pipe = fd[1];
         exec_x11spice(server, test->xserver->display);
-        g_warning("server exec failed.");
+        g_warning("x11spice server exec failed.");
         return -1;
     }
     else
@@ -156,7 +137,7 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
 
         if (rc <= 0)
         {
-            g_warning("server failed to start.");
+            g_warning("x11spice server failed to send signal line.  rc %d, errno %d", rc, errno);
             return -1;
         }
 

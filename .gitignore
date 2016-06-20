@@ -24,3 +24,8 @@ src/tests/run
 *.log
 *.trs
 x11spice_test
+
+*.gcno
+*.gcda
+*coverage.info.tmp
+x11spice-1.0-coverage*
