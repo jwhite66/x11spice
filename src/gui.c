@@ -53,7 +53,6 @@ void gui_run(gui_t *gui)
 
 void gui_destroy(gui_t *gui)
 {
-    if (gui->window)
-        gtk_widget_destroy(gui->window);
+    /* gtk destroys these windows on exit */
     gui->window = NULL;
 }
