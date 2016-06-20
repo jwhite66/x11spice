@@ -13,5 +13,6 @@ x11spice_test_SOURCES = \
 
 noinst_PROGRAMS = $(TESTS)
 
+.PHONY: leakcheck.log
 leakcheck.log: 
 	VALGRIND="valgrind --leak-check=full --log-file=leakcheck.log" make check
