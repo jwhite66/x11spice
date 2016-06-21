@@ -82,6 +82,7 @@ static void * handle_xevents(void *opaque)
         if (ev->response_type != display->damage_ext->first_event + XCB_DAMAGE_NOTIFY)
         {
             g_debug("Unexpected X event %d", ev->response_type);
+            free(ev);
             continue;;
         }
         dev = (xcb_damage_notify_event_t *) ev;
@@ -97,7 +98,10 @@ static void * handle_xevents(void *opaque)
         /* The MORE flag is 0x80 on the level field; the proto documentation
            is wrong on this point.  Check the xorg server code to see */
         if (dev->level & 0x80)
+        {
+            free(ev);
             continue;
+        }
 
         xcb_damage_subtract(display->c, display->damage,
             XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
@@ -110,9 +114,14 @@ static void * handle_xevents(void *opaque)
 
         pixman_region_clear(&damage_region);
 
+        free(ev);
+
         if (display->session && ! session_alive(display->session))
             break;
     }
+
+    while ((ev = xcb_poll_for_event(display->c)))
+        free(ev);
 
     pixman_region_clear(&damage_region);
 
@@ -252,6 +261,7 @@ void destroy_shm_image(display_t *d, shm_image_t *shmi)
     shmctl(shmi->shmid, IPC_RMID, NULL);
     if (shmi->drawable_ptr)
         free(shmi->drawable_ptr);
+    free(shmi);
 }
 
 // FIXME - is this necessary?  And/or can we modify our pushing
