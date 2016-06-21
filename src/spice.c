@@ -250,7 +250,8 @@ static int req_cmd_notification(QXLInstance *qin)
 
 static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
+    destroy_shm_image(&s->session->display, (shm_image_t *) release_info.info->id);
 }
 
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *cmd)
