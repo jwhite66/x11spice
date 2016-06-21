@@ -135,6 +135,7 @@ int display_open(display_t *d, options_t *options)
     int scr;
     int rc;
     xcb_damage_query_version_cookie_t dcookie;
+    xcb_damage_query_version_reply_t *damage_version;
 
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
@@ -161,13 +162,14 @@ int display_open(display_t *d, options_t *options)
     }
 
     dcookie = xcb_damage_query_version(d->c, XCB_DAMAGE_MAJOR_VERSION, XCB_DAMAGE_MINOR_VERSION);
-    xcb_damage_query_version_reply(d->c, dcookie, &error);
+    damage_version = xcb_damage_query_version_reply(d->c, dcookie, &error);
     if (error)
     {
         fprintf(stderr, "Error:  Could not query damage; type %d; code %d; major %d; minor %d\n",
             error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NODAMAGE;
     }
+    free(damage_version);
 
     d->damage = xcb_generate_id(d->c);
     cookie = xcb_damage_create_checked(d->c, d->damage, d->screen->root, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
