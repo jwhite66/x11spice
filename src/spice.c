@@ -575,6 +575,10 @@ int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen)
 
 void spice_end(spice_t *s)
 {
+    spice_server_remove_interface(&s->tablet_sin.base);
+    spice_server_remove_interface(&s->keyboard_sin.base);
+    spice_server_remove_interface(&s->display_sin.base);
+
     spice_server_destroy(s->server);
 
     // FIXME - can't always destroy...
