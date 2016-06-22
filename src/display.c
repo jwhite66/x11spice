@@ -242,16 +242,18 @@ int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
 {
     xcb_shm_get_image_cookie_t cookie;
     xcb_generic_error_t *e;
+    xcb_shm_get_image_reply_t *reply;
 
     cookie = xcb_shm_get_image(d->c, d->screen->root, x, y, shmi->w, shmi->h,
                 ~0, XCB_IMAGE_FORMAT_Z_PIXMAP, shmi->shmseg, 0);
 
-    xcb_shm_get_image_reply(d->c, cookie, &e);
+    reply = xcb_shm_get_image_reply(d->c, cookie, &e);
     if (e)
     {
         g_error("xcb_shm_get_image from %dx%d into size %dx%d failed", x, y, shmi->w, shmi->h);
         return X11SPICE_ERR_NOSHM;
     }
+    free(reply);
 
     return 0;
 }
