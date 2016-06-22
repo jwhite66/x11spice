@@ -164,11 +164,22 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
     return 0;
 }
 
+static void stop_valgrind_children(x11spice_server_t *server)
+{
+    char buf[256];
+    snprintf(buf, sizeof(buf), "kill `ps h --ppid %d -o pid`", server->pid);
+    system(buf);
+    usleep(100 * 1000L);
+}
+
 void x11spice_stop(x11spice_server_t *server)
 {
     g_message("server stopping; pid %d", server->pid);
     if (server->running)
     {
+        if (getenv("VALGRIND"))
+            stop_valgrind_children(server);
+
         if (still_alive(server->pid))
         {
             kill(server->pid, SIGTERM);
