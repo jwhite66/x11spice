@@ -46,6 +46,10 @@ void options_free(options_t *options)
 
     g_free(options->spice_password);
     options->spice_password = NULL;
+
+    if (options->autouri)
+        free(options->autouri);
+    options->autouri = NULL;
 }
 
 
@@ -196,3 +200,16 @@ void options_from_config(options_t *options)
 
     g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr, options->disable_ticketing, options->spice_port);
 }
+
+#if defined(OPTIONS_MAIN)
+int main(int argc, char *argv[])
+{
+    options_t options;
+
+    options_init(&options);
+    options_parse_arguments(argc, argv, &options);
+    g_message("Options parsed");
+    options_from_config(&options);
+    options_free(&options);
+}
+#endif

@@ -56,3 +56,16 @@ void gui_destroy(gui_t *gui)
     /* gtk destroys these windows on exit */
     gui->window = NULL;
 }
+
+#if defined(GUI_MAIN)
+#include <locale.h>
+int main(int argc, char *argv[])
+{
+    gui_t gui;
+
+    setlocale (LC_ALL, "");
+    gui_create(&gui, argc, argv, 0, 0);
+    gui_run(&gui);
+    gui_destroy(&gui);
+}
+#endif

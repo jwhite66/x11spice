@@ -15,4 +15,4 @@ noinst_PROGRAMS = $(TESTS)
 
 .PHONY: leakcheck.log
 leakcheck.log: 
-	VALGRIND="valgrind --leak-check=full --log-file=leakcheck.log" make check
+	VALGRIND="valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --suppressions=options.supp --suppressions=gui.supp --log-file=leakcheck.log" make check
