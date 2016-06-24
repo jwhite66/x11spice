@@ -250,19 +250,34 @@ static int req_cmd_notification(QXLInstance *qin)
 
 static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
 {
-    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
-    destroy_shm_image(&s->session->display, (shm_image_t *) release_info.info->id);
+    spice_free_release((spice_release_t *) release_info.info->id);
 }
 
 static int get_cursor_command(QXLInstance *qin, struct QXLCommandExt *cmd)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
-    return 0;
+    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
+    struct QXLCursorCmd *cursor;
+
+    cursor = session_pop_cursor(s->session);
+    if (! cursor)
+        return 0;
+
+    cmd->group_id = 0;
+    cmd->flags = 0;
+    cmd->cmd.type = QXL_CMD_CURSOR;
+    cmd->cmd.padding = 0;
+    cmd->cmd.data = (QXLPHYSICAL) cursor;
+
+    return 1;
 }
 
 static int req_cursor_notification(QXLInstance *qin)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
+
+    if (session_cursor_waiting(s->session) > 0)
+        return 0;
+
     return 1;
 }
 
@@ -583,4 +598,36 @@ void spice_end(spice_t *s)
 
     // FIXME - can't always destroy...
     spice_destroy_primary(s);
+}
+
+spice_release_t *spice_create_release(spice_t *s, release_type_t type, void *data)
+{
+    spice_release_t *r = malloc(sizeof(*r));
+    if (r)
+    {
+        r->s = s;
+        r->type = type;
+        r->data = data;
+    }
+
+    return r;
+}
+
+void spice_free_release(spice_release_t *r)
+{
+    if (!r)
+        return;
+
+    switch (r->type)
+    {
+        case RELEASE_SHMI:
+            destroy_shm_image(&r->s->session->display, (shm_image_t *) r->data);
+            break;
+
+        case RELEASE_MEMORY:
+            free(r->data);
+            break;
+    }
+
+    free(r);
 }

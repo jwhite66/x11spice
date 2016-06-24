@@ -32,12 +32,14 @@
 
 void free_cursor_queue_item(gpointer data)
 {
-    // FIXME
+    QXLCursorCmd  *ccmd = (QXLCursorCmd *) data;
+    spice_free_release((spice_release_t *) ccmd->release_info.id);
 }
 
 void free_draw_queue_item(gpointer data)
 {
-    // FIXME
+    QXLDrawable *drawable = (QXLDrawable *) data;
+    spice_free_release((spice_release_t *) drawable->release_info.id);
 }
 
 void *session_pop_draw(session_t *session)
@@ -54,6 +56,22 @@ int session_draw_waiting(session_t *session)
         return 0;
 
     return g_async_queue_length(session->draw_queue);
+}
+
+void *session_pop_cursor(session_t *session)
+{
+    if (! session || ! session->running)
+        return NULL;
+
+    return g_async_queue_try_pop(session->cursor_queue);
+}
+
+int session_cursor_waiting(session_t *session)
+{
+    if (! session || ! session->running)
+        return 0;
+
+    return g_async_queue_length(session->cursor_queue);
 }
 
 void session_handle_key(session_t *session, uint8_t keycode, int is_press)
@@ -167,4 +185,46 @@ void session_destroy(session_t *s)
 int session_alive(session_t *s)
 {
     return s->running;
+}
+
+int session_push_cursor_image(session_t *s,
+        int x, int y, int w, int h, int xhot, int yhot,
+        int imglen, uint8_t *imgdata)
+{
+    QXLCursorCmd  *ccmd;
+    QXLCursor     *cursor;
+
+    ccmd = calloc(1, sizeof(*ccmd) + sizeof(*cursor) + imglen);
+    if (! ccmd)
+        return X11SPICE_ERR_MALLOC;;
+
+    cursor = (QXLCursor *) (ccmd + 1);
+
+    cursor->header.unique = 0;
+    cursor->header.type = SPICE_CURSOR_TYPE_ALPHA;
+    cursor->header.width = w;
+    cursor->header.height = h;
+
+    cursor->header.hot_spot_x = xhot;
+    cursor->header.hot_spot_y = yhot;
+
+    cursor->data_size = imglen;
+
+    cursor->chunk.next_chunk = 0;
+    cursor->chunk.prev_chunk = 0;
+    cursor->chunk.data_size = imglen;
+
+    memcpy(cursor->chunk.data, imgdata, imglen);
+
+    ccmd->type = QXL_CURSOR_SET;
+    ccmd->u.set.position.x = x + xhot;
+    ccmd->u.set.position.y = y + yhot;
+    ccmd->u.set.shape = (QXLPHYSICAL) cursor;
+    ccmd->u.set.visible = TRUE;
+
+    ccmd->release_info.id = (uint64_t) spice_create_release(&s->spice, RELEASE_MEMORY, ccmd);
+
+    g_async_queue_push(s->cursor_queue, ccmd);
+
+    return 0;
 }

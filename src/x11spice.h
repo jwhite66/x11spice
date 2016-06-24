@@ -35,5 +35,7 @@
 #define X11SPICE_ERR_PARSE              8
 #define X11SPICE_ERR_AUTO_FAILED        9
 #define X11SPICE_ERR_SHUTTING_DOWN     10
+#define X11SPICE_ERR_NOXFIXES          11
+#define X11SPICE_ERR_NOEVENTS          12
 
 #endif

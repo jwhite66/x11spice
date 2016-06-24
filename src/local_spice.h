@@ -49,6 +49,15 @@ typedef struct
     session_t *session;
 } spice_t;
 
+typedef enum { RELEASE_SHMI, RELEASE_MEMORY } release_type_t;
+
+typedef struct
+{
+    release_type_t type;
+    void *data;
+    spice_t *s;
+} spice_release_t;
+
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
@@ -56,5 +65,9 @@ int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen);
 void spice_end(spice_t *s);
 int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shmaddr);
 void spice_destroy_primary(spice_t *s);
+
+spice_release_t *spice_create_release(spice_t *s, release_type_t type, void *data);
+void spice_free_release(spice_release_t *r);
+
 
 #endif

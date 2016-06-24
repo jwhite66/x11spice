@@ -65,6 +65,37 @@ static int bits_per_pixel(display_t *d)
 }
 
 
+static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_event_t *cev)
+{
+    xcb_xfixes_get_cursor_image_cookie_t icookie;
+    xcb_xfixes_get_cursor_image_reply_t *ir;
+    xcb_generic_error_t                 *error;
+    int imglen;
+    uint32_t *imgdata;
+
+    g_debug("Cursor Notify [seq %d|subtype %d|serial %u]",
+            cev->sequence, cev->subtype, cev->cursor_serial);
+
+    icookie = xcb_xfixes_get_cursor_image(display->c);
+
+    ir = xcb_xfixes_get_cursor_image_reply(display->c, icookie, &error);
+    if (error)
+    {
+        g_error("Could not get cursor_image_reply; type %d; code %d; major %d; minor %d\n",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return;
+    }
+
+    imglen = xcb_xfixes_get_cursor_image_cursor_image_length(ir);
+    imgdata = xcb_xfixes_get_cursor_image_cursor_image(ir);
+
+    session_push_cursor_image(display->session,
+        ir->x, ir->y, ir->width, ir->height, ir->xhot, ir->yhot,
+        imglen * sizeof(*imgdata), (uint8_t *) imgdata);
+
+    free(ir);
+}
+
 static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *dev, pixman_region16_t *damage_region)
 {
     int i, n;
@@ -106,7 +137,10 @@ static void * handle_xevents(void *opaque)
     // FIXME - we do not have a good way to cause this thread to exit gracefully
     while ((ev = xcb_wait_for_event(display->c)))
     {
-        if (ev->response_type == display->damage_ext->first_event + XCB_DAMAGE_NOTIFY)
+        if (ev->response_type == display->xfixes_ext->first_event + XCB_XFIXES_CURSOR_NOTIFY)
+            handle_cursor_notify(display, (xcb_xfixes_cursor_notify_event_t *) ev);
+
+        else if (ev->response_type == display->damage_ext->first_event + XCB_DAMAGE_NOTIFY)
             handle_damage_notify(display, (xcb_damage_notify_event_t *) ev, &damage_region);
 
         else
@@ -184,6 +218,24 @@ int display_open(display_t *d, options_t *options)
     {
         fprintf(stderr, "Error:  XSHM not found on display %s\n", options->display ? options->display : "");
         return X11SPICE_ERR_NOSHM;
+    }
+
+    d->xfixes_ext = xcb_get_extension_data(d->c, &xcb_xfixes_id);
+    if (! d->xfixes_ext)
+    {
+        fprintf(stderr, "Error:  XFIXES not found on display %s\n", options->display ? options->display : "");
+        return X11SPICE_ERR_NOXFIXES;
+    }
+
+    xcb_xfixes_query_version(d->c, XCB_XFIXES_MAJOR_VERSION, XCB_XFIXES_MINOR_VERSION);
+
+    cookie = xcb_xfixes_select_cursor_input_checked(d->c, d->screen->root, XCB_XFIXES_CURSOR_NOTIFY_MASK_DISPLAY_CURSOR);
+    error = xcb_request_check(d->c, cookie);
+    if (error)
+    {
+        fprintf(stderr, "Error:  Could not select cursor input; type %d; code %d; major %d; minor %d\n",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return X11SPICE_ERR_NOXFIXES;
     }
 
     rc = display_create_fullscreen(d);

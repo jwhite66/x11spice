@@ -52,6 +52,8 @@ typedef struct
 
     const xcb_query_extension_reply_t *shm_ext;
 
+    const xcb_query_extension_reply_t *xfixes_ext;
+
     shm_image_t *fullscreen;
 
     pthread_t event_thread;

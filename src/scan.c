@@ -27,7 +27,7 @@
 #include <glib.h>
 
 // FIXME - refactor and move this...
-static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
+static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, int y)
 {
     QXLDrawable *drawable;
     QXLImage *qxl_image;
@@ -38,7 +38,7 @@ static QXLDrawable *shm_image_to_drawable(shm_image_t *shmi, int x, int y)
         return NULL;
     qxl_image = (QXLImage *) (drawable + 1);
 
-    drawable->release_info.id = (uint64_t) shmi;
+    drawable->release_info.id = (uint64_t) spice_create_release(s, RELEASE_SHMI, shmi);
     shmi->drawable_ptr = drawable;
 
     drawable->surface_id = 0;
@@ -139,7 +139,7 @@ static void handle_damage_report(session_t *session, scan_report_t *r)
     if (read_shm_image(&session->display, shmi, r->x, r->y) == 0)
     {
         //save_ximage_pnm(shmi);
-        QXLDrawable *drawable = shm_image_to_drawable(shmi, r->x, r->y);
+        QXLDrawable *drawable = shm_image_to_drawable(&session->spice, shmi, r->x, r->y);
         if (drawable)
         {
             g_async_queue_push(session->draw_queue, drawable);
