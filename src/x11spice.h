@@ -37,5 +37,6 @@
 #define X11SPICE_ERR_SHUTTING_DOWN     10
 #define X11SPICE_ERR_NOXFIXES          11
 #define X11SPICE_ERR_NOEVENTS          12
+#define X11SPICE_ERR_NO_XKB            13
 
 #endif

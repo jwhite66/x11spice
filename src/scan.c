@@ -92,7 +92,7 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
 static guint64 get_timeout(scanner_t *scanner)
 {
     // FIXME - make this a bit smarter...
-    
+
     return G_USEC_PER_SEC / 30;
 }
 

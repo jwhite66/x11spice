@@ -306,13 +306,6 @@ static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
 }
 
-static void set_client_capabilities(QXLInstance *qin,
-                                    uint8_t client_present,
-                                    uint8_t *caps)
-{
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
-}
-
 static int client_monitors_config(QXLInstance *qin,
                                   VDAgentMonitorsConfig *monitors_config)
 {
@@ -377,8 +370,17 @@ static void kbd_push_key(SpiceKbdInstance *sin, uint8_t frag)
 
 static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
-    return 0;
+    spice_t *s = SPICE_CONTAINEROF(sin, spice_t, keyboard_sin);
+    uint8_t ret = 0;
+
+    if (session_get_one_led(s->session, "Caps Lock"))
+        ret |= SPICE_KEYBOARD_MODIFIER_FLAGS_CAPS_LOCK;
+    if (session_get_one_led(s->session, "Scroll Lock"))
+        ret |= SPICE_KEYBOARD_MODIFIER_FLAGS_SCROLL_LOCK;
+    if (session_get_one_led(s->session, "Num Lock"))
+        ret |= SPICE_KEYBOARD_MODIFIER_FLAGS_NUM_LOCK;
+
+    return ret;
 }
 
 void tablet_set_logical_size(SpiceTabletInstance* tablet, int width, int height)
@@ -498,7 +500,7 @@ void initialize_spice_instance(spice_t *s)
         .async_complete = async_complete,
         .update_area_complete = update_area_complete,
         .client_monitors_config = client_monitors_config,
-        .set_client_capabilities = set_client_capabilities,
+        .set_client_capabilities = NULL, /* Allowed to be unset */
     };
 
     static const SpiceKbdInterface keyboard_sif = {

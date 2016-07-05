@@ -20,10 +20,12 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <xcb/xcb.h>
 #include <xcb/xtest.h>
 #include <xcb/xcb_aux.h>
+#include <xcb/xkb.h>
 
 #include "x11spice.h"
 #include "session.h"
@@ -228,3 +230,42 @@ int session_push_cursor_image(session_t *s,
 
     return 0;
 }
+
+int session_get_one_led(session_t *session, const char *name)
+{
+    int ret;
+    xcb_intern_atom_cookie_t atom_cookie;
+    xcb_intern_atom_reply_t *atom_reply;
+    xcb_xkb_get_named_indicator_cookie_t indicator_cookie;
+    xcb_xkb_get_named_indicator_reply_t *indicator_reply;
+    xcb_generic_error_t *error;
+
+    atom_cookie = xcb_intern_atom(session->display.c, 0, strlen(name), name);
+    atom_reply = xcb_intern_atom_reply(session->display.c, atom_cookie, &error);
+    if (error)
+    {
+        g_warning("Could not get atom; type %d; code %d; major %d; minor %d",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return 0;
+    }
+
+    indicator_cookie = xcb_xkb_get_named_indicator(session->display.c,
+                         XCB_XKB_ID_USE_CORE_KBD,
+                         XCB_XKB_LED_CLASS_DFLT_XI_CLASS,
+                         XCB_XKB_ID_DFLT_XI_ID,
+                         atom_reply->atom);
+    free(atom_reply);
+
+    indicator_reply = xcb_xkb_get_named_indicator_reply(session->display.c, indicator_cookie, &error);
+    if (error)
+    {
+        g_warning("Could not get indicator; type %d; code %d; major %d; minor %d",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return 0;
+    }
+
+    ret = indicator_reply->on;
+    free(indicator_reply);
+    return ret;
+}
+

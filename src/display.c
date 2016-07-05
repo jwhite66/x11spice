@@ -29,6 +29,7 @@
 
 #include <xcb/xcb.h>
 #include <xcb/xcb_aux.h>
+#include <xcb/xkb.h>
 #include <pixman.h>
 #include <errno.h>
 
@@ -168,6 +169,8 @@ int display_open(display_t *d, options_t *options)
     int rc;
     xcb_damage_query_version_cookie_t dcookie;
     xcb_damage_query_version_reply_t *damage_version;
+    xcb_xkb_use_extension_cookie_t use_cookie;
+    xcb_xkb_use_extension_reply_t *use_reply;
 
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
@@ -237,6 +240,17 @@ int display_open(display_t *d, options_t *options)
             error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NOXFIXES;
     }
+
+    use_cookie = xcb_xkb_use_extension(d->c, XCB_XKB_MAJOR_VERSION, XCB_XKB_MINOR_VERSION);
+    use_reply = xcb_xkb_use_extension_reply(d->c, use_cookie, &error);
+    if (error)
+    {
+        fprintf(stderr, "Could not get use reply; type %d; code %d; major %d; minor %d\n",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return X11SPICE_ERR_NO_XKB;
+    }
+    free(use_reply);
+
 
     rc = display_create_fullscreen(d);
 

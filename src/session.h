@@ -63,6 +63,8 @@ void session_handle_mouse_position(session_t *session, int x, int y, uint32_t bu
 void session_handle_mouse_buttons(session_t *session, uint32_t buttons_state);
 void session_handle_mouse_wheel(session_t *session, int wheel_motion, uint32_t buttons_state);
 
+int session_get_one_led(session_t *session, const char *name);
+
 int session_push_cursor_image(session_t *s,
         int x, int y, int w, int h, int xhot, int yhot,
         int imglen, uint8_t *imgdata);
