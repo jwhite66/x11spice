@@ -295,7 +295,8 @@ static int flush_resources(QXLInstance *qin)
 
 static void async_complete(QXLInstance *qin, uint64_t cookie)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("%s: cookie 0x%lx", __FUNCTION__, cookie);
+    spice_free_release((spice_release_t *) cookie);
 }
 
 static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
@@ -403,6 +404,27 @@ void tablet_buttons(SpiceTabletInstance* tablet, uint32_t buttons_state)
     session_handle_mouse_buttons(s->session, buttons_state);
 }
 
+static int send_monitors_config(spice_t *s, int w, int h)
+{
+    spice_release_t *release;
+
+    QXLMonitorsConfig *monitors = calloc(1, sizeof(QXLMonitorsConfig) + sizeof(QXLHead));
+    if (! monitors)
+        return X11SPICE_ERR_MALLOC;
+    release = spice_create_release(s, RELEASE_MEMORY, monitors);
+
+    monitors->count = 1;
+    monitors->max_allowed = 1;
+    monitors->heads[0].id = 0;
+    monitors->heads[0].surface_id = 0;
+    monitors->heads[0].width = w;
+    monitors->heads[0].height = h;
+
+    spice_qxl_monitors_config_async(&s->display_sin, (QXLPHYSICAL) monitors, 0, (uint64_t) release);
+
+    return 0;
+}
+
 int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shmaddr)
 {
     QXLDevSurfaceCreate surface;
@@ -426,7 +448,7 @@ int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shm
 
     spice_qxl_create_primary_surface(&s->display_sin, 0, &surface);
 
-    return 0;
+    return send_monitors_config(s, w, h);
 }
 
 void spice_destroy_primary(spice_t *s)
