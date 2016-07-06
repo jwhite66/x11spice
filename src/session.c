@@ -21,6 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sched.h>
 
 #include <xcb/xcb.h>
 #include <xcb/xtest.h>
@@ -46,10 +47,18 @@ void free_draw_queue_item(gpointer data)
 
 void *session_pop_draw(session_t *session)
 {
+    void *ret = NULL;
     if (! session || ! session->running)
-        return NULL;
+        return ret;
 
-    return g_async_queue_try_pop(session->draw_queue);
+    if (! g_mutex_trylock(&session->lock))
+        return ret;
+
+    ret = g_async_queue_try_pop(session->draw_queue);
+    session->draw_command_in_progress = (ret != NULL);
+    g_mutex_unlock(&session->lock);
+
+    return ret;
 }
 
 int session_draw_waiting(session_t *session)
@@ -88,7 +97,7 @@ void session_handle_key(session_t *session, uint8_t keycode, int is_press)
 void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state)
 {
     xcb_test_fake_input(session->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
-        session->display.screen->root, x, y, 0);
+        session->display.root, x, y, 0);
     xcb_flush(session->display.c);
 }
 
@@ -100,7 +109,7 @@ static void session_handle_button_change(session_t *s, uint32_t buttons_state)
         if ((buttons_state ^ s->spice.buttons_state) & (1 << i)) {
             int action = (buttons_state & (1 << i));
             xcb_test_fake_input(s->display.c, action ? XCB_BUTTON_PRESS : XCB_BUTTON_RELEASE,
-                i + 1, XCB_CURRENT_TIME, s->display.screen->root, 0, 0, 0);
+                i + 1, XCB_CURRENT_TIME, s->display.root, 0, 0, 0);
         }
     }
     s->spice.buttons_state = buttons_state;
@@ -170,8 +179,54 @@ int session_create(session_t *s)
 {
     s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
     s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
+    g_mutex_init(&s->lock);
 
     return 0;
+}
+
+
+
+/* Important note - this is meant to be called from
+    a thread context *other* than the spice worker thread */
+int session_recreate_primary(session_t *s)
+{
+    int rc;
+
+    while (1)
+    {
+        g_mutex_lock(&s->lock);
+        if (! s->draw_command_in_progress)
+            break;
+
+        g_mutex_unlock(&s->lock);
+        // FIXME - g_threads?
+        sched_yield();
+    }
+
+    spice_destroy_primary(&s->spice);
+    display_destroy_fullscreen(&s->display);
+
+    rc = display_create_fullscreen(&s->display);
+    if (rc == 0)
+    {
+        shm_image_t *f = s->display.fullscreen;
+        rc = spice_create_primary(&s->spice, f->w, f->h, f->bytes_per_line, f->shmaddr);
+    }
+
+    g_mutex_unlock(&s->lock);
+    return rc;
+}
+
+void session_handle_resize(session_t *s)
+{
+    if (s->display.width == s->spice.width &&
+        s->display.height == s->spice.height)
+        return;
+
+    g_debug("resizing from %dx%d to %dx%d",
+        s->spice.width, s->spice.height,
+        s->display.width, s->display.height);
+    session_recreate_primary(s);
 }
 
 void session_destroy(session_t *s)

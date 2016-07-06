@@ -314,6 +314,23 @@ static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
 static int client_monitors_config(QXLInstance *qin,
                                   VDAgentMonitorsConfig *monitors_config)
 {
+    int i;
+    if (! monitors_config)
+    {
+        /* a NULL is used as a test to see if we support this function */
+        g_debug("%s: NULL monitors_config", __func__);
+        return TRUE;
+    }
+
+    g_debug("%s: [num %d|flags 0x%x]", __func__, monitors_config->num_of_monitors, monitors_config->flags);
+    for (i = 0; i < monitors_config->num_of_monitors; i++)
+        g_debug("  %d:[height %d|width %d|depth %d|x %d|y %d]", i,
+            monitors_config->monitors[i].height,
+            monitors_config->monitors[i].width,
+            monitors_config->monitors[i].depth,
+            monitors_config->monitors[i].x,
+            monitors_config->monitors[i].y);
+
     g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
     return FALSE;
 }
@@ -452,6 +469,9 @@ int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shm
     // FIXME - compute this dynamically?
     surface.format     = SPICE_SURFACE_FMT_32_xRGB;
     surface.mem        = (QXLPHYSICAL) shmaddr;
+
+    s->width = w;
+    s->height = h;
 
     spice_qxl_create_primary_surface(&s->display_sin, 0, &surface);
 

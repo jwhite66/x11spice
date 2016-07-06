@@ -39,6 +39,9 @@ typedef struct session_struct
     scanner_t   scanner;
     int         running;
 
+    GMutex      lock;
+    int         draw_command_in_progress;
+
     GAsyncQueue *cursor_queue;
     GAsyncQueue *draw_queue;
 } session_t;
@@ -51,6 +54,8 @@ void session_destroy(session_t *s);
 int session_start(session_t *s);
 void session_end(session_t *s);
 int session_alive(session_t *s);
+
+void session_handle_resize(session_t *s);
 
 void *session_pop_draw(session_t *session);
 int session_draw_waiting(session_t *session);

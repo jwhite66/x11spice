@@ -37,6 +37,9 @@ typedef struct
     SpiceCoreInterface *core;
     QXLInstance display_sin;
 
+    int width;
+    int height;
+
     SpiceKbdInstance keyboard_sin;
     uint8_t escape;
 

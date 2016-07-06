@@ -45,7 +45,10 @@ typedef struct
 typedef struct
 {
     xcb_connection_t *c;
-    xcb_screen_t *screen;
+    xcb_window_t root;
+    int width;
+    int height;
+    int depth;
 
     const xcb_query_extension_reply_t *damage_ext;
     xcb_damage_damage_t damage;

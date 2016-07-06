@@ -59,7 +59,7 @@ static int bits_per_pixel(display_t *d)
     for (fmt = xcb_setup_pixmap_formats_iterator(xcb_get_setup(d->c));
           fmt.rem;
           xcb_format_next(&fmt))
-        if (fmt.data->depth == d->screen->root_depth)
+        if (fmt.data->depth == d->depth)
             return fmt.data->bits_per_pixel;
 
      return 0;
@@ -127,6 +127,22 @@ static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *
     pixman_region_clear(damage_region);
 }
 
+static void handle_configure_notify(display_t *display, xcb_configure_notify_event_t *cev)
+{
+    g_debug("%s:[event %u|window %u|above_sibling %u|x %d|y %d|width %d|height %d|border_width %d|override_redirect %d]",
+       __func__, cev->event, cev->window, cev->above_sibling, cev->x, cev->y,
+       cev->width, cev->height, cev->border_width, cev->override_redirect);
+    if (cev->window != display->root)
+    {
+        g_debug("not main window; skipping.");
+        return;
+    }
+    
+    display->width = cev->width;
+    display->height = cev->height;
+    session_handle_resize(display->session);
+}
+
 static void * handle_xevents(void *opaque)
 {
     display_t *display = (display_t *) opaque;
@@ -143,6 +159,9 @@ static void * handle_xevents(void *opaque)
 
         else if (ev->response_type == display->damage_ext->first_event + XCB_DAMAGE_NOTIFY)
             handle_damage_notify(display, (xcb_damage_notify_event_t *) ev, &damage_region);
+
+        else if (ev->response_type == XCB_CONFIGURE_NOTIFY)
+            handle_configure_notify(display, (xcb_configure_notify_event_t *) ev);
 
         else
             g_debug("Unexpected X event %d", ev->response_type);
@@ -161,6 +180,24 @@ static void * handle_xevents(void *opaque)
     return NULL;
 }
 
+static int register_for_events(display_t *d)
+{
+    uint32_t events = XCB_EVENT_MASK_STRUCTURE_NOTIFY; // FIXME - do we need this? | XCB_EVENT_MASK_POINTER_MOTION;
+    xcb_void_cookie_t cookie;
+    xcb_generic_error_t *error;
+
+    cookie = xcb_change_window_attributes_checked(d->c, d->root,
+                XCB_CW_EVENT_MASK, &events);
+    error = xcb_request_check(d->c, cookie);
+    if (error)
+    {
+        fprintf(stderr, "Error:  Could not register normal events; type %d; code %d; major %d; minor %d\n",
+            error->response_type, error->error_code, error->major_code, error->minor_code);
+        return X11SPICE_ERR_NOEVENTS;
+    }
+
+    return 0;
+}
 
 
 int display_open(display_t *d, options_t *options)
@@ -174,6 +211,7 @@ int display_open(display_t *d, options_t *options)
 
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
+    xcb_screen_t *screen;
 
     d->c = xcb_connect(options->display, &scr);
     if (! d->c)
@@ -182,12 +220,16 @@ int display_open(display_t *d, options_t *options)
         return X11SPICE_ERR_NODISPLAY;
     }
 
-    d->screen = screen_of_display(d->c, scr);
-    if (!d->screen)
+    screen = screen_of_display(d->c, scr);
+    if (!screen)
     {
         fprintf(stderr, "Error:  could not get screen for display %s\n", options->display ? options->display : "");
         return X11SPICE_ERR_NODISPLAY;
     }
+    d->root = screen->root;
+    d->width = screen->width_in_pixels;
+    d->height = screen->height_in_pixels;
+    d->depth = screen->root_depth;
 
     d->damage_ext = xcb_get_extension_data(d->c, &xcb_damage_id);
     if (! d->damage_ext)
@@ -207,7 +249,7 @@ int display_open(display_t *d, options_t *options)
     free(damage_version);
 
     d->damage = xcb_generate_id(d->c);
-    cookie = xcb_damage_create_checked(d->c, d->damage, d->screen->root, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
+    cookie = xcb_damage_create_checked(d->c, d->damage, d->root, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
     error = xcb_request_check(d->c, cookie);
     if (error)
     {
@@ -232,7 +274,7 @@ int display_open(display_t *d, options_t *options)
 
     xcb_xfixes_query_version(d->c, XCB_XFIXES_MAJOR_VERSION, XCB_XFIXES_MINOR_VERSION);
 
-    cookie = xcb_xfixes_select_cursor_input_checked(d->c, d->screen->root, XCB_XFIXES_CURSOR_NOTIFY_MASK_DISPLAY_CURSOR);
+    cookie = xcb_xfixes_select_cursor_input_checked(d->c, d->root, XCB_XFIXES_CURSOR_NOTIFY_MASK_DISPLAY_CURSOR);
     error = xcb_request_check(d->c, cookie);
     if (error)
     {
@@ -252,6 +294,10 @@ int display_open(display_t *d, options_t *options)
     free(use_reply);
 
 
+    rc = register_for_events(d);
+    if (rc)
+        return rc;
+
     rc = display_create_fullscreen(d);
 
     g_message("Display %s opened", options->display ? options->display : "");
@@ -270,8 +316,8 @@ shm_image_t * create_shm_image(display_t *d, int w, int h)
     if (! shmi)
         return shmi;
 
-    shmi->w = w ? w : d->screen->width_in_pixels;
-    shmi->h = h ? h : d->screen->height_in_pixels;
+    shmi->w = w ? w : d->width;
+    shmi->h = h ? h : d->height;
 
     shmi->bytes_per_line = (bits_per_pixel(d) / 8)  * shmi->w;
     imgsize = shmi->bytes_per_line * shmi->h;
@@ -308,7 +354,7 @@ int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
     xcb_generic_error_t *e;
     xcb_shm_get_image_reply_t *reply;
 
-    cookie = xcb_shm_get_image(d->c, d->screen->root, x, y, shmi->w, shmi->h,
+    cookie = xcb_shm_get_image(d->c, d->root, x, y, shmi->w, shmi->h,
                 ~0, XCB_IMAGE_FORMAT_Z_PIXMAP, shmi->shmseg, 0);
 
     reply = xcb_shm_get_image_reply(d->c, cookie, &e);
