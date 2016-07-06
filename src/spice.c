@@ -164,7 +164,12 @@ static void watch_remove(SpiceWatch *watch)
 
 static void channel_event(int event, SpiceChannelEventInfo *info)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    /* This event, as far as I can tell, is fairly useless.
+       You don't get any real information in the pointer, so
+       it's not a good opportunity to act on connect/disconnect,
+       for example */
+    g_debug("channel event [connection_id %d|type %d|id %d]",
+        info->connection_id, info->type, info->id);
 }
 
 static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
