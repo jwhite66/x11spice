@@ -50,6 +50,12 @@ void options_free(options_t *options)
     if (options->autouri)
         free(options->autouri);
     options->autouri = NULL;
+
+    g_free(options->user_config_file);
+    options->user_config_file = NULL;
+
+    g_free(options->system_config_file);
+    options->system_config_file = NULL;
 }
 
 
@@ -97,10 +103,14 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
 
     return ret;
 }
-static void usage(char *argv0)
+static void usage(options_t *options, char *argv0)
 {
-    fprintf(stderr, "%s: \n", argv0);
-    // FIXME - write usage
+    int len = strlen(argv0);
+    fprintf(stderr, "%s: [--viewonly ] [--timeout=seconds] [--display=DISPLAY]\n", argv0);
+    fprintf(stderr, "%*.*s  [--auto] [--generate-passcode]\n", len, len, "");
+    fprintf(stderr, "%*.*s  [--hide] [--minimize]\n", len, len, "");
+    fprintf(stderr, "Command line parameters override settings in %s\n", options->user_config_file);
+    fprintf(stderr, "which overrides settings in %s\n", options->system_config_file ? options->system_config_file : "the system config file");
 }
 
 int options_parse_arguments(int argc, char *argv[], options_t *options)
@@ -137,20 +147,31 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
         switch (rc)
         {
+            case OPTION_VIEWONLY:
+                /* FIXME - implement --viewonly */
+                options->viewonly = 1;
+                break;
+
             case OPTION_TIMEOUT:
+                /* FIXME - implement --timeout */
                 options->timeout = atol(optarg);
                 break;
 
-            case OPTION_DISPLAY:
-                options->display = strdup(optarg);
+            case OPTION_AUTO:
+                options->autouri = strdup(optarg);
                 break;
 
             case OPTION_HIDE:
                 options->hide = 1;
                 break;
 
-            case OPTION_AUTO:
-                options->autouri = strdup(optarg);
+            case OPTION_GENERATE_PASSCODE:
+                /* FIXME - implement --generate_passcode */
+                options->generate_passcode = 1;
+                break;
+
+            case OPTION_DISPLAY:
+                options->display = strdup(optarg);
                 break;
 
             case OPTION_MINIMIZE:
@@ -158,7 +179,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
                 break;
 
             default:
-                usage(argv[0]);
+                usage(options, argv[0]);
                 return X11SPICE_ERR_BADARGS;
         }
     }
@@ -171,20 +192,28 @@ void options_from_config(options_t *options)
     GKeyFile * userkey = g_key_file_new();
     GKeyFile * systemkey = g_key_file_new();
 
-    char * user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice", NULL);
+    options->user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice", NULL);
 
-    if(!g_key_file_load_from_file(userkey, user_config_file, G_KEY_FILE_NONE, NULL))
+    if(!g_key_file_load_from_file(userkey, options->user_config_file, G_KEY_FILE_NONE, NULL))
     {
         g_key_file_free(userkey);
         userkey = NULL;
     }
 
     if (!g_key_file_load_from_dirs(systemkey, "x11spice", (const char**)g_get_system_config_dirs(),
-            NULL, G_KEY_FILE_NONE, NULL))
+            &options->system_config_file, G_KEY_FILE_NONE, NULL))
     {
         g_key_file_free(systemkey);
         systemkey = NULL;
     }
+
+    options->timeout = int_option(userkey, systemkey, "spice", "timeout");
+    options->minimize = int_option(userkey, systemkey, "spice", "minimize");
+    options->viewonly = int_option(userkey, systemkey, "spice", "viewonly");
+    options->generate_passcode = int_option(userkey, systemkey, "spice", "generate_passcode");
+    options->hide = int_option(userkey, systemkey, "spice", "hide");
+    options->display = string_option(userkey, systemkey, "spice", "display");
+    options->autouri = string_option(userkey, systemkey, "spice", "auto");
 
     options->spice_addr = string_option(userkey, systemkey, "spice", "addr");
     options->spice_password = string_option(userkey, systemkey, "spice", "password");
@@ -192,7 +221,6 @@ void options_from_config(options_t *options)
     options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable_ticketing");
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit_on_disconnect");
 
-    g_free(user_config_file);
     if (systemkey)
         g_key_file_free(systemkey);
     if (userkey)
@@ -208,8 +236,8 @@ int main(int argc, char *argv[])
 
     options_init(&options);
     options_parse_arguments(argc, argv, &options);
-    g_message("Options parsed");
     options_from_config(&options);
+    g_message("Options parsed");
     options_free(&options);
 }
 #endif
