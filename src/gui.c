@@ -29,6 +29,21 @@ void gui_sigterm(void)
     cached_gui = NULL;
 }
 
+void gui_remote_connected(gui_t *gui, const char *details)
+{
+    gtk_label_set_text(GTK_LABEL(gui->status_label), "Connection established");
+    gtk_widget_set_tooltip_text(gui->status_label, details);
+    gtk_widget_set_sensitive(gui->disconnect_button, TRUE);
+    // FIXME - disconnect should do something, but that looks hard
+}
+
+void gui_remote_disconnected(gui_t *gui)
+{
+    gtk_label_set_text(GTK_LABEL(gui->status_label), "Waiting for connection");
+    gtk_widget_set_sensitive(gui->disconnect_button, FALSE);
+}
+
+
 int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 {
     if (! gtk_init_check(&argc, &argv))
@@ -36,6 +51,26 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 
     gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     g_signal_connect(gui->window, "destroy", G_CALLBACK(gui_sigterm), NULL);
+
+    gui->button_box = gtk_vbutton_box_new();
+    gtk_container_add(GTK_CONTAINER(gui->window), gui->button_box);
+
+    gui->status_label = gtk_label_new(NULL);
+    gtk_container_add(GTK_CONTAINER(gui->button_box), gui->status_label);
+
+    gui->disconnect_button = gtk_button_new_from_stock(GTK_STOCK_DISCONNECT);
+    gtk_container_add(GTK_CONTAINER(gui->button_box), gui->disconnect_button);
+    gui_remote_disconnected(gui);
+
+    gui->quit_button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
+    gtk_container_add(GTK_CONTAINER(gui->button_box), gui->quit_button);
+    g_signal_connect_swapped(gui->quit_button, "clicked", G_CALLBACK (gtk_widget_destroy), gui->window);
+
+    gtk_widget_show(gui->status_label);
+    gtk_widget_show(gui->disconnect_button);
+    gtk_widget_show(gui->quit_button);
+    gtk_widget_show(gui->button_box);
+
     if (! hidden)
         gtk_widget_show(gui->window);
     if (minimize)

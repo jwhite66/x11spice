@@ -33,6 +33,15 @@
 #include "scan.h"
 
 
+/*----------------------------------------------------------------------------
+** I fought very hard to avoid global variables, but the spice channel_event
+**  callback simply had no way of passing back a data pointer.
+** So we use this global variable to enable the use of the session connect
+**  and disconnect notices from spice
+----------------------------------------------------------------------------*/
+session_t *global_session;
+
+
 void free_cursor_queue_item(gpointer data)
 {
     QXLCursorCmd  *ccmd = (QXLCursorCmd *) data;
@@ -161,6 +170,7 @@ int session_start(session_t *s)
     s->running = 1;
 
 end:
+    global_session = s;
     if (rc)
         session_end(s);
     return rc;
@@ -169,6 +179,7 @@ end:
 void session_end(session_t *s)
 {
     s->running = 0;
+    global_session = NULL;
 
     scanner_destroy(&s->scanner);
 
@@ -184,14 +195,8 @@ int session_create(session_t *s)
     return 0;
 }
 
-
-
-/* Important note - this is meant to be called from
-    a thread context *other* than the spice worker thread */
-int session_recreate_primary(session_t *s)
+static void flush_and_lock(session_t *s)
 {
-    int rc;
-
     while (1)
     {
         g_mutex_lock(&s->lock);
@@ -202,7 +207,15 @@ int session_recreate_primary(session_t *s)
         // FIXME - g_threads?
         sched_yield();
     }
+}
 
+/* Important note - this is meant to be called from
+    a thread context *other* than the spice worker thread */
+int session_recreate_primary(session_t *s)
+{
+    int rc;
+
+    flush_and_lock(s);
     spice_destroy_primary(&s->spice);
     display_destroy_fullscreen(&s->display);
 
@@ -322,5 +335,19 @@ int session_get_one_led(session_t *session, const char *name)
     ret = indicator_reply->on;
     free(indicator_reply);
     return ret;
+}
+
+void session_remote_connected(const char *from)
+{
+    if (!global_session)
+        return;
+    gui_remote_connected(&global_session->gui, from);
+}
+
+void session_remote_disconnected(void)
+{
+    if (!global_session)
+        return;
+    gui_remote_disconnected(&global_session->gui);
 }
 

@@ -29,6 +29,10 @@
 typedef struct
 {
     GtkWidget *window;
+    GtkWidget *button_box;
+    GtkWidget *quit_button;
+    GtkWidget *disconnect_button;
+    GtkWidget *status_label;
 } gui_t;
 
 /*----------------------------------------------------------------------------
@@ -38,5 +42,8 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden);
 void gui_sigterm(void);
 void gui_run(gui_t *gui);
 void gui_destroy(gui_t *gui);
+
+void gui_remote_connected(gui_t *gui, const char *details);
+void gui_remote_disconnected(gui_t *gui);
 
 #endif

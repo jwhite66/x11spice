@@ -22,6 +22,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/socket.h>
+#include <netdb.h>
 
 #include "local_spice.h"
 #include "x11spice.h"
@@ -164,12 +166,26 @@ static void watch_remove(SpiceWatch *watch)
 
 static void channel_event(int event, SpiceChannelEventInfo *info)
 {
-    /* This event, as far as I can tell, is fairly useless.
-       You don't get any real information in the pointer, so
-       it's not a good opportunity to act on connect/disconnect,
-       for example */
-    g_debug("channel event [connection_id %d|type %d|id %d]",
-        info->connection_id, info->type, info->id);
+    g_debug("channel event %d [connection_id %d|type %d|id %d|flags %d]",
+        event, info->connection_id, info->type, info->id, info->flags);
+    if (event == SPICE_CHANNEL_EVENT_INITIALIZED && info->type == SPICE_CHANNEL_MAIN)
+    {
+        char from[NI_MAXHOST + NI_MAXSERV + 128];
+        strcpy(from, "Remote computer");
+        if (info->flags & SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT)
+        {
+            int rc;
+            char host[NI_MAXHOST];
+            char server[NI_MAXSERV];
+            rc = getnameinfo((struct sockaddr *) &info->paddr_ext, info->plen_ext, host, sizeof(host), server, sizeof(server), 0);
+            if (rc == 0)
+                snprintf(from, sizeof(from), "Connection from %s:%s", host, server);
+        }
+        session_remote_connected(from);
+    }
+
+    if (event == SPICE_CHANNEL_EVENT_DISCONNECTED && info->type == SPICE_CHANNEL_MAIN)
+        session_remote_disconnected();
 }
 
 static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
@@ -584,6 +600,7 @@ static int try_auto(spice_t *s, options_t *options)
     if (fd < 0)
         return X11SPICE_ERR_AUTO_FAILED;
 
+    // FIXME - do we need to also set the port so subsequent sessions use the same port?
     return spice_server_set_listen_socket_fd(s->server, fd);
 }
 
