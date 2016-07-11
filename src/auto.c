@@ -18,6 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  auto.c
+**      This file provides functions to implement the '--auto' option
+**  for x11spice.  This mostly involves trying to find an open port we can use
+**  for our Xserver
+**--------------------------------------------------------------------------*/
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,14 +44,12 @@
 #include "x11spice.h"
 
 #define SPICE_URI_PREFIX    "spice://"
-#define UNIX_URI_PREFIX     "unix://"
 
 int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_end)
 {
     int leading = 0;
     int trailing = 0;
     int hyphen = 0;
-    int known_unix = 0;
     const char *p;
     int len;
 
@@ -56,43 +61,32 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
         if (memcmp(auto_spec, SPICE_URI_PREFIX, strlen(SPICE_URI_PREFIX)) == 0)
             auto_spec += strlen(SPICE_URI_PREFIX);
 
-    /* Allow form of unix:// */
-    if (strlen(auto_spec) > strlen(UNIX_URI_PREFIX))
-        if (memcmp(auto_spec, UNIX_URI_PREFIX, strlen(UNIX_URI_PREFIX)) == 0)
-        {
-            auto_spec += strlen(UNIX_URI_PREFIX);
-            known_unix = 1;
-        }
-
     p = auto_spec + strlen(auto_spec) - 1;
-    if (! known_unix)
+    /* Look for a form of NNNN-NNNN at the end of the line */
+    for (; p >= auto_spec && *p; p--)
     {
-        /* Look for a form of NNNN-NNNN at the end of the line */
-        for (; p >= auto_spec && *p; p--)
+        /* Skip trailing white space */
+        if (isspace(*p) && ! hyphen && ! trailing)
+            continue;
+
+        /* We're looking for only digits and a hyphen */
+        if (*p != '-' && !isdigit(*p))
+            break;
+
+        if (*p == '-')
         {
-            /* Skip trailing white space */
-            if (isspace(*p) && ! hyphen && ! trailing)
-                continue;
-
-            /* We're looking for only digits and a hyphen */
-            if (*p != '-' && !isdigit(*p))
-                break;
-
-            if (*p == '-')
-            {
-                if (hyphen)
-                    return X11SPICE_ERR_PARSE;
-                hyphen++;
-                if (trailing > 0)
-                    *port_end = strtol(p + 1, NULL, 0);
-                continue;
-            }
-
             if (hyphen)
-                leading++;
-            else
-                trailing++;
+                return X11SPICE_ERR_PARSE;
+            hyphen++;
+            if (trailing > 0)
+                *port_end = strtol(p + 1, NULL, 0);
+            continue;
         }
+
+        if (hyphen)
+            leading++;
+        else
+            trailing++;
     }
 
     if (leading && hyphen)
@@ -206,83 +200,6 @@ int auto_listen_port_fd(const char *addr, int start, int end)
     return -1;
 }
 
-int auto_listen_unix_fd(const char *addr)
-{
-    const char *xxx;
-    char *dupe = NULL;
-    const char *p;
-    struct sockaddr_un local = { 0, };
-    int len;
-    int rc;
-    int sock;
-
-    if (! addr)
-        return -1;
-
-    /* Allow form of unix:// */
-    if (strlen(addr) > strlen(UNIX_URI_PREFIX))
-        if (memcmp(addr, UNIX_URI_PREFIX, strlen(UNIX_URI_PREFIX)) == 0)
-            addr += strlen(UNIX_URI_PREFIX);
-
-    xxx = strstr(addr, "XXXXXX");
-    if (! xxx)
-    {
-        fprintf(stderr, "Error: you must provide XXXXXX in a Unix socket path specification.\n");
-        return -1;
-    }
-
-    if ((sock = socket(AF_UNIX, SOCK_STREAM, 0)) == -1) {
-        perror("sock");
-        return -1;
-    }
-
-    for (p = xxx; *p && *p == 'X'; p++)
-        ;
-
-    dupe = strdup(addr);
-    if (*p)
-        rc = mkstemps(dupe, strlen(addr) - (p - addr));
-    else
-        rc = mkstemp(dupe);
-
-    if (rc < 0)
-    {
-        fprintf(stderr, "Error: '%s' does not work as a temporary file pattern.\n", addr);
-        goto exit;
-    }
-
-    local.sun_family = AF_UNIX;
-    strncpy(local.sun_path, dupe, sizeof(local.sun_path) - 1);
-    close(rc);
-    unlink(local.sun_path);
-    len = SUN_LEN(&local);
-    if (bind(sock, (struct sockaddr *)&local, len) == -1) {
-        perror("bind");
-        rc = -1;
-        goto exit;
-    }
-
-    if (listen(sock, SOMAXCONN) != 0) {
-        perror("listen");
-        rc = -1;
-        goto exit;
-    }
-
-    rc = sock;
-
-exit:
-
-    if (rc >= 0)
-        printf("URI=unix://%s\n", dupe);
-    else
-        close(sock);
-
-    if (dupe)
-        free(dupe);
-
-    return rc;
-}
-
 int auto_listen(char *auto_spec)
 {
     char *addr = NULL;
@@ -293,10 +210,7 @@ int auto_listen(char *auto_spec)
     if (auto_parse(auto_spec, &addr, &start, &end))
         return -1;
 
-    if (start == -1 && end == -1)
-        rc = auto_listen_unix_fd(addr);
-    else
-        rc = auto_listen_port_fd(addr, start, end);
+    rc = auto_listen_port_fd(addr, start, end);
     if (addr)
         free(addr);
 

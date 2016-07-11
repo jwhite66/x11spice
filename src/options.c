@@ -107,7 +107,7 @@ static void usage(options_t *options, char *argv0)
 {
     int len = strlen(argv0);
     fprintf(stderr, "%s: [--viewonly ] [--timeout=seconds] [--display=DISPLAY]\n", argv0);
-    fprintf(stderr, "%*.*s  [--auto] [--generate-passcode]\n", len, len, "");
+    fprintf(stderr, "%*.*s  [--auto=<listen-spec>] [--generate-passcode]\n", len, len, "");
     fprintf(stderr, "%*.*s  [--hide] [--minimize]\n", len, len, "");
     fprintf(stderr, "Command line parameters override settings in %s\n", options->user_config_file);
     fprintf(stderr, "which overrides settings in %s\n", options->system_config_file ? options->system_config_file : "the system config file");
