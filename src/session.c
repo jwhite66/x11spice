@@ -302,6 +302,7 @@ int session_push_cursor_image(session_t *s,
     ccmd->release_info.id = (uint64_t) spice_create_release(&s->spice, RELEASE_MEMORY, ccmd);
 
     g_async_queue_push(s->cursor_queue, ccmd);
+    spice_qxl_wakeup(&s->spice.display_sin);
 
     return 0;
 }
