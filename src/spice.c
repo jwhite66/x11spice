@@ -18,6 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  spice.c
+**      This file contains functions that interface with the spice server
+**  that we start.  Note that the header file for this file is 'local_spice.h',
+**  to avoid name space conflicts.
+**--------------------------------------------------------------------------*/
+
 #include <glib.h>
 #include <stdlib.h>
 #include <stdio.h>

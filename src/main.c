@@ -18,6 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  main.c
+**      The main program for x11spice.  The hope is that this code
+**  remains simple, and easy to follow, and that logic is broken neatly
+**  down in subordinate modules.
+**--------------------------------------------------------------------------*/
+
 
 #include <stdio.h>
 #include <signal.h>

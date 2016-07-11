@@ -18,6 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  gui.c
+**      This file provides what modest user interface we have in x11spice.
+**  The interface is all built using gtk, and all hand coded in this file.
+**  This code does have the critical function of running the gtk main
+**  loop, which is one of the main running threads of the x11spice program.
+**--------------------------------------------------------------------------*/
 #include "gui.h"
 #include "x11spice.h"
 

@@ -18,6 +18,13 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  display.c
+**      This file provides functions to interact with the X11 display.
+**  The concept is that the bulk of the connection to the X server is done
+**  here, using xcb.
+**--------------------------------------------------------------------------*/
+
 #include <stdlib.h>
 #include <stdio.h>
 

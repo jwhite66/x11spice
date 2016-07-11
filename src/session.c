@@ -18,6 +18,14 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  session.c
+**      A session is meant to tie it all together.  It groups a local system
+**  gui along with code to interace with the current X display, and then connects
+**  it all to a spice server.  The lines blur at times; but that is the goal.
+**--------------------------------------------------------------------------*/
+
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

@@ -18,6 +18,15 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  scan.c
+**      This code is meant to handle the logic around knowing which portions
+**  of the display to push along to the spice server.  There are two key ways
+**  we detect these changes - through periodic scans of the screen
+**  (see scanner_periodic) and through XDAMAGE reports
+**  (see display/handle_damage_notify)
+**--------------------------------------------------------------------------*/
+
 #include "x11spice.h"
 #include "session.h"
 #include "scan.h"

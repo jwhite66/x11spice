@@ -18,6 +18,11 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+/*----------------------------------------------------------------------------
+**  options.c
+**      Code to handle options.  This includes command line arguments
+**  as well as options that can be set in configuration files.
+**--------------------------------------------------------------------------*/
 
 #include <glib.h>
 #include <getopt.h>
