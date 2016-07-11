@@ -298,7 +298,7 @@ int display_open(display_t *d, options_t *options)
     if (rc)
         return rc;
 
-    rc = display_create_fullscreen(d);
+    rc = display_create_screen_images(d);
 
     g_message("Display %s opened", options->display ? options->display : "");
 
@@ -360,13 +360,73 @@ int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
     reply = xcb_shm_get_image_reply(d->c, cookie, &e);
     if (e)
     {
-        g_error("xcb_shm_get_image from %dx%d into size %dx%d failed", x, y, shmi->w, shmi->h);
-        return X11SPICE_ERR_NOSHM;
+        g_warning("xcb_shm_get_image from %dx%d into size %dx%d failed", x, y, shmi->w, shmi->h);
+        return -1;
     }
     free(reply);
 
     return 0;
 }
+
+int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_across)
+{
+    int ret;
+    int len;
+    int i;
+
+    memset(tiles, 0, sizeof(*tiles) * tiles_across);
+    ret = read_shm_image(d, d->scanline, 0, row);
+    if (ret == 0)
+    {
+        uint32_t *old = ((uint32_t *) d->fullscreen->shmaddr) + row * d->fullscreen->w;
+        uint32_t *new = ((uint32_t *) d->scanline->shmaddr);
+        if (memcmp(old, new, sizeof(*old) * d->scanline->w) == 0)
+            return 0;
+
+        len = d->scanline->w / tiles_across;
+        for (i = 0; i < tiles_across; i++, old += len, new += len)
+        {
+            if (i == tiles_across - 1)
+                len = d->scanline->w - (i * len);
+            if (memcmp(old, new, sizeof(*old) * len))
+            {
+                ret++;
+                tiles[i]++;
+            }
+        }
+    }
+
+#if defined(DEBUG_SCANLINES)
+    fprintf(stderr, "%d: ", row);
+    for (i = 0; i < tiles_across; i++)
+        fprintf(stderr, "%c", tiles[i] ? 'X' : '-');
+    fprintf(stderr, "\n"); fflush(stderr);
+#endif
+
+    return ret;
+}
+
+void display_copy_image_into_fullscreen(display_t *d, shm_image_t *shmi, int x, int y)
+{
+    uint32_t *to = ((uint32_t *) d->fullscreen->shmaddr) + (y * d->fullscreen->w) + x;
+    uint32_t *from = ((uint32_t *) shmi->shmaddr);
+    int i;
+
+    /* Ignore invalid draws.  This can happen if the screen is resized after a scan
+       has been qeueued */
+    if (x + shmi->w > d->fullscreen->w)
+        return;
+    if (y + shmi->h > d->fullscreen->h)
+        return;
+
+    for (i = 0; i < shmi->h; i++)
+    {
+        memcpy(to, from, sizeof(*to) * shmi->w);
+        from += shmi->w;
+        to += d->fullscreen->w;
+    }
+}
+
 
 void destroy_shm_image(display_t *d, shm_image_t *shmi)
 {
@@ -378,23 +438,36 @@ void destroy_shm_image(display_t *d, shm_image_t *shmi)
     free(shmi);
 }
 
-// FIXME - is this necessary?  And/or can we modify our pushing
-//         to spice to use it?
-int display_create_fullscreen(display_t *d)
+// FIXME - Can we / should we do pushing to spice using the fullscreen?
+int display_create_screen_images(display_t *d)
 {
     d->fullscreen = create_shm_image(d, 0, 0);
     if (!d->fullscreen)
         return X11SPICE_ERR_NOSHM;
 
+    d->scanline = create_shm_image(d, 0, 1);
+    if (!d->scanline)
+    {
+        destroy_shm_image(d, d->fullscreen);
+        d->fullscreen = NULL;
+        return X11SPICE_ERR_NOSHM;
+    }
+
     return 0;
 }
 
-void display_destroy_fullscreen(display_t *d)
+void display_destroy_screen_images(display_t *d)
 {
     if (d->fullscreen)
     {
         destroy_shm_image(d, d->fullscreen);
         d->fullscreen = NULL;
+    }
+
+    if (d->scanline)
+    {
+        destroy_shm_image(d, d->scanline);
+        d->scanline = NULL;
     }
 }
 
@@ -408,7 +481,7 @@ int display_start_event_thread(display_t *d)
 void display_close(display_t *d)
 {
     xcb_damage_destroy(d->c, d->damage);
-    display_destroy_fullscreen(d);
+    display_destroy_screen_images(d);
     xcb_disconnect(d->c);
 }
 

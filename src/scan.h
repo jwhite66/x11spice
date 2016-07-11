@@ -25,7 +25,7 @@
 /*----------------------------------------------------------------------------
 **  Definitions and simple types
 **--------------------------------------------------------------------------*/
-typedef enum { DAMAGE_SCAN_REPORT, SCANLINE_SCAN_REPORT, HUNCH_SCAN_REPORT, EXIT_SCAN_REPORT } scan_type_t;
+typedef enum { DAMAGE_SCAN_REPORT, SCANLINE_SCAN_REPORT, EXIT_SCAN_REPORT } scan_type_t;
 
 typedef struct session_struct session_t;
 /*----------------------------------------------------------------------------
@@ -47,6 +47,7 @@ typedef struct
     GAsyncQueue *queue;
     session_t *session;
     GMutex  lock;
+    int current_scanline;
 } scanner_t;
 
 

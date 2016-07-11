@@ -58,6 +58,7 @@ typedef struct
     const xcb_query_extension_reply_t *xfixes_ext;
 
     shm_image_t *fullscreen;
+    shm_image_t *scanline;
 
     pthread_t event_thread;
     session_t *session;
@@ -69,9 +70,12 @@ typedef struct
 **--------------------------------------------------------------------------*/
 int display_open(display_t *display, options_t *options);
 void display_close(display_t *display);
-int display_create_fullscreen(display_t *d);
-void display_destroy_fullscreen(display_t *d);
+int display_create_screen_images(display_t *d);
+void display_destroy_screen_images(display_t *d);
 int display_start_event_thread(display_t *d);
+int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_across);
+void display_copy_image_into_fullscreen(display_t *d, shm_image_t *shmi, int x, int y);
+
 shm_image_t * create_shm_image(display_t *d, int w, int h);
 int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y);
 void destroy_shm_image(display_t *d, shm_image_t *shmi);

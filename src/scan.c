@@ -26,6 +26,28 @@
 #include <pthread.h>
 #include <glib.h>
 
+/*----------------------------------------------------------------------------
+**  We will scan over the screen by breaking it into a grid of tiles, each
+**   NUM_SCANLINES x NUM_HORIZONTAL_TILES.  We try to scan in a fashion designed
+**   to catch changes with a fairly modest set of scans; this scan pattern is
+**   taken from the x11vnc project.
+**--------------------------------------------------------------------------*/
+#define NUM_SCANLINES               32
+#define NUM_HORIZONTAL_TILES        NUM_SCANLINES
+#define DESIRED_SCAN_FPS            30
+
+/* If we have more than this number of changes in any given row, we just
+   copy the whole row */
+#define SCAN_ROW_THRESHOLD          (NUM_HORIZONTAL_TILES / 2)
+
+static int scanlines[NUM_SCANLINES] = {
+	 0, 16,  8, 24,  4, 20, 12, 28,
+	10, 26, 18,  2, 22,  6, 30, 14,
+	 1, 17,  9, 25,  7, 23, 15, 31,
+	19,  3, 27, 11, 29, 13,  5, 21
+};
+
+
 // FIXME - refactor and move this...
 static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, int y)
 {
@@ -92,8 +114,10 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
 static guint64 get_timeout(scanner_t *scanner)
 {
     // FIXME - make this a bit smarter...
+    //         in particular, it should scan much less frequently
+    //         if there is no client connected
 
-    return G_USEC_PER_SEC / 30;
+    return G_USEC_PER_SEC / DESIRED_SCAN_FPS / NUM_SCANLINES;
 }
 
 static void save_ximage_pnm(shm_image_t *shmi)
@@ -124,8 +148,7 @@ static void save_ximage_pnm(shm_image_t *shmi)
     fclose(fp);
 }
 
-
-static void handle_damage_report(session_t *session, scan_report_t *r)
+static void handle_scan_report(session_t *session, scan_report_t *r)
 {
     shm_image_t *shmi;
 
@@ -139,6 +162,10 @@ static void handle_damage_report(session_t *session, scan_report_t *r)
     if (read_shm_image(&session->display, shmi, r->x, r->y) == 0)
     {
         //save_ximage_pnm(shmi);
+        g_mutex_lock(&session->lock);
+        display_copy_image_into_fullscreen(&session->display, shmi, r->x, r->y);
+        g_mutex_unlock(&session->lock);
+
         QXLDrawable *drawable = shm_image_to_drawable(&session->spice, shmi, r->x, r->y);
         if (drawable)
         {
@@ -163,6 +190,177 @@ static void free_queue_item(gpointer data)
     free(data);
 }
 
+/* Note: session lock must be held by caller */
+static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, int end_row, int end_col)
+{
+    int x = (scanner->session->display.fullscreen->w / NUM_HORIZONTAL_TILES) * start_col;
+    int w = (scanner->session->display.fullscreen->w / NUM_HORIZONTAL_TILES) * (end_col - start_col + 1);
+
+    int y = (scanner->session->display.fullscreen->h / NUM_SCANLINES) * start_row;
+    int h = scanner->session->display.fullscreen->h / NUM_SCANLINES * (end_row - start_row + 1);
+
+    if (x + w > scanner->session->display.fullscreen->w)
+        w = scanner->session->display.fullscreen->w - x;
+
+    if (y + h > scanner->session->display.fullscreen->h)
+        h = scanner->session->display.fullscreen->w - y;
+
+    scanner_push(scanner, SCANLINE_SCAN_REPORT, x, y, w, h);
+}
+
+static void grow_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row, int tiles_changed[][NUM_HORIZONTAL_TILES])
+{
+    int i;
+    int j;
+    for (i = 0; i < NUM_SCANLINES; i++)
+    {
+        if (! tiles_changed_in_row[i] || tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES)
+            continue;
+
+        if (tiles_changed_in_row[i] > SCAN_ROW_THRESHOLD)
+        {
+            tiles_changed_in_row[i] = NUM_HORIZONTAL_TILES;
+            continue;
+        }
+
+        for (j = 0; j < NUM_HORIZONTAL_TILES; j++)
+        {
+            if (! tiles_changed[i][j])
+            {
+                int grow = 0;
+
+                /* You get good optimzations from having multiple rows,
+                   so be more aggressive in growing the first and last tile;
+                   just require a neighbor be set */
+                if (j == 0 && tiles_changed[i][1])
+                    grow++;
+                else if (j == NUM_HORIZONTAL_TILES - 1 && tiles_changed[i][j - 1])
+                    grow++;
+
+                /* Otherwise, require that growing 'fills' a gap */
+                else if (j > 0 && j < (NUM_HORIZONTAL_TILES - 1) &&
+                     tiles_changed[i][j - 1] && tiles_changed[i][j + 1])
+                    grow++;
+
+                if (grow)
+                {
+                    tiles_changed[i][j]++;
+                    tiles_changed_in_row[i]++;
+                }
+            }
+        }
+
+        /* Recheck, in case our growth algorithm pushed this
+           into the 'scan the whole row' category */
+        if (tiles_changed_in_row[i] > SCAN_ROW_THRESHOLD)
+            tiles_changed_in_row[i] = NUM_HORIZONTAL_TILES;
+    }
+}
+
+static void push_changes_across_rows(scanner_t *scanner, int *tiles_changed_in_row)
+{
+    int i = 0;
+    int start_row = -1;
+    int current_row = -1;
+
+    for (i = 0; i < NUM_SCANLINES; i++)
+    {
+        if (tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES)
+        {
+            if (start_row == -1)
+                start_row = i;
+            current_row = i;
+        }
+        else
+        {
+            if (current_row != -1)
+            {
+                push_tiles_report(scanner, start_row, 0, current_row, NUM_HORIZONTAL_TILES - 1);
+                start_row = current_row = -1;
+            }
+            continue;
+        }
+    }
+
+    if (current_row != -1)
+        push_tiles_report(scanner, start_row, 0, current_row, NUM_HORIZONTAL_TILES - 1);
+}
+
+static void push_changes_in_one_row(scanner_t *scanner, int row, int *tiles_changed)
+{
+    int i = 0;
+    int start_tile = -1;
+    int current_tile = -1;
+
+    for (i = 0; i < NUM_HORIZONTAL_TILES; i++)
+    {
+        if (tiles_changed[i] == 0)
+        {
+            if (current_tile != -1)
+            {
+                push_tiles_report(scanner, row, start_tile, row, current_tile);
+                start_tile = current_tile = -1;
+            }
+            continue;
+        }
+        if (start_tile == -1)
+            start_tile = i;
+        current_tile = i;
+    }
+
+    if (current_tile != -1)
+        push_tiles_report(scanner, row, start_tile, row, current_tile);
+}
+
+static void push_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row, int tiles_changed[][NUM_HORIZONTAL_TILES])
+{
+    int i = 0;
+
+    push_changes_across_rows(scanner, tiles_changed_in_row);
+
+    for (i = 0; i < NUM_SCANLINES; i++)
+        if (tiles_changed_in_row[i] > 0 && tiles_changed_in_row[i] < NUM_HORIZONTAL_TILES)
+            push_changes_in_one_row(scanner, i, tiles_changed[i]);
+}
+
+
+static void scanner_periodic(scanner_t *scanner)
+{
+    int i;
+    int tiles_changed_in_row[NUM_SCANLINES];
+    int tiles_changed[NUM_SCANLINES][NUM_HORIZONTAL_TILES];
+    int h;
+    int y;
+    int offset;
+    int rc;
+
+    g_mutex_lock(&scanner->session->lock);
+    h = scanner->session->display.fullscreen->h / NUM_SCANLINES;
+
+    offset = scanlines[scanner->current_scanline++];
+    scanner->current_scanline %= NUM_SCANLINES;
+
+    for (y = offset, i = 0; i < NUM_SCANLINES; i++, y += h)
+    {
+        if (y >= scanner->session->display.fullscreen->h)
+            y = scanner->session->display.fullscreen->h - 1;
+
+        rc = display_find_changed_tiles(&scanner->session->display,
+                y, tiles_changed[i], NUM_HORIZONTAL_TILES);
+        if (rc < 0)
+        {
+            g_mutex_unlock(&scanner->session->lock);
+            return;
+        }
+
+        tiles_changed_in_row[i] = rc;
+    }
+    grow_changed_tiles(scanner, tiles_changed_in_row, tiles_changed);
+    push_changed_tiles(scanner, tiles_changed_in_row, tiles_changed);
+
+    g_mutex_unlock(&scanner->session->lock);
+}
+
 static void * scanner_run(void *opaque)
 {
     scanner_t *scanner = (scanner_t *) opaque;
@@ -171,20 +369,18 @@ static void * scanner_run(void *opaque)
         scan_report_t *r;
         r = (scan_report_t *) g_async_queue_timeout_pop(scanner->queue, get_timeout(scanner));
         if (! r)
-            continue;
-
-        switch(r->type)
         {
-            case EXIT_SCAN_REPORT:
-                free_queue_item(r);
-                return 0;
-
-            case DAMAGE_SCAN_REPORT:
-                handle_damage_report(scanner->session, r);
-                break;
-
-            // FIXME - implement hint + scan
+            scanner_periodic(scanner);
+            continue;
         }
+
+        if (r->type == EXIT_SCAN_REPORT)
+        {
+            free_queue_item(r);
+            break;
+        }
+
+        handle_scan_report(scanner->session, r);
         free_queue_item(r);
     }
 
@@ -196,6 +392,7 @@ int scanner_create(scanner_t *scanner)
 {
     scanner->queue = g_async_queue_new_full(free_queue_item);
     g_mutex_init(&scanner->lock);
+    scanner->current_scanline = 0;
     // FIXME - gthread?
     return pthread_create(&scanner->thread, NULL, scanner_run, scanner);
 }
@@ -247,6 +444,11 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
         }
         g_mutex_unlock(&scanner->lock);
     }
+
+#if defined(DEBUG_SCANLINES)
+    fprintf(stderr, "scan: %dx%d @ %dx%d\n", w, h, x, y); fflush(stderr);
+#endif
+
     return rc;
 }
 

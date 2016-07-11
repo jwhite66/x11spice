@@ -72,10 +72,17 @@ void *session_pop_draw(session_t *session)
 
 int session_draw_waiting(session_t *session)
 {
+    int ret = 0;
+
     if (! session || ! session->running)
         return 0;
 
-    return g_async_queue_length(session->draw_queue);
+    if (! g_mutex_trylock(&session->lock))
+        return ret;
+
+    ret = g_async_queue_length(session->draw_queue);
+    g_mutex_unlock(&session->lock);
+    return(ret);
 }
 
 void *session_pop_cursor(session_t *session)
@@ -183,7 +190,7 @@ void session_end(session_t *s)
 
     scanner_destroy(&s->scanner);
 
-    display_destroy_fullscreen(&s->display);
+    display_destroy_screen_images(&s->display);
 }
 
 int session_create(session_t *s)
@@ -217,9 +224,9 @@ int session_recreate_primary(session_t *s)
 
     flush_and_lock(s);
     spice_destroy_primary(&s->spice);
-    display_destroy_fullscreen(&s->display);
+    display_destroy_screen_images(&s->display);
 
-    rc = display_create_fullscreen(&s->display);
+    rc = display_create_screen_images(&s->display);
     if (rc == 0)
     {
         shm_image_t *f = s->display.fullscreen;
