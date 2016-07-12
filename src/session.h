@@ -24,6 +24,7 @@
 #include "options.h"
 #include "display.h"
 #include "local_spice.h"
+#include "agent.h"
 #include "gui.h"
 #include "scan.h"
 
@@ -35,6 +36,7 @@ typedef struct session_struct
     options_t   options;
     display_t   display;
     spice_t     spice;
+    agent_t     agent;
     gui_t       gui;
     scanner_t   scanner;
     int         running;

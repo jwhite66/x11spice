@@ -52,6 +52,11 @@ void options_free(options_t *options)
     g_free(options->spice_password);
     options->spice_password = NULL;
 
+    g_free(options->virtio_path);
+    options->virtio_path = NULL;
+    g_free(options->uinput_path);
+    options->uinput_path = NULL;
+
     if (options->autouri)
         free(options->autouri);
     options->autouri = NULL;
@@ -225,6 +230,8 @@ void options_from_config(options_t *options)
     options->spice_port = int_option(userkey, systemkey, "spice", "port");
     options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable_ticketing");
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit_on_disconnect");
+    options->virtio_path = string_option(userkey, systemkey, "spice", "virtio_path");
+    options->uinput_path = string_option(userkey, systemkey, "spice", "uinput_path");
 
     if (systemkey)
         g_key_file_free(systemkey);

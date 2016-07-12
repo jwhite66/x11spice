@@ -33,6 +33,7 @@
 #include "options.h"
 #include "local_spice.h"
 #include "display.h"
+#include "agent.h"
 #include "gui.h"
 #include "session.h"
 
@@ -102,6 +103,7 @@ int main(int argc, char *argv[])
     if (rc)
         goto exit;
     spice_started = 1;
+    agent_start(&session.spice, &session.options, &session.agent);
 
     /*------------------------------------------------------------------------
     **  Start our session and leave the GUI running until we have
@@ -124,7 +126,10 @@ exit:
         session_end(&session);
 
     if (spice_started)
+    {
+        agent_stop(&session.agent);
         spice_end(&session.spice);
+    }
 
     if (gui_created)
         gui_destroy(&session.gui);

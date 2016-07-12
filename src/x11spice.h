@@ -38,5 +38,8 @@
 #define X11SPICE_ERR_NOXFIXES          11
 #define X11SPICE_ERR_NOEVENTS          12
 #define X11SPICE_ERR_NO_XKB            13
+#define X11SPICE_ERR_NO_SOCKET         14
+#define X11SPICE_ERR_BIND              15
+#define X11SPICE_ERR_LISTEN            16
 
 #endif
