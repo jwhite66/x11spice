@@ -47,7 +47,7 @@
 #include "scan.h"
 
 
-static xcb_screen_t *screen_of_display (xcb_connection_t *c, int screen)
+static xcb_screen_t *screen_of_display(xcb_connection_t *c, int screen)
 {
     xcb_screen_iterator_t iter;
 
@@ -64,12 +64,11 @@ static int bits_per_pixel(display_t *d)
     xcb_format_iterator_t fmt;
 
     for (fmt = xcb_setup_pixmap_formats_iterator(xcb_get_setup(d->c));
-          fmt.rem;
-          xcb_format_next(&fmt))
+         fmt.rem; xcb_format_next(&fmt))
         if (fmt.data->depth == d->depth)
             return fmt.data->bits_per_pixel;
 
-     return 0;
+    return 0;
 }
 
 
@@ -77,7 +76,7 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
 {
     xcb_xfixes_get_cursor_image_cookie_t icookie;
     xcb_xfixes_get_cursor_image_reply_t *ir;
-    xcb_generic_error_t                 *error;
+    xcb_generic_error_t *error;
     int imglen;
     uint32_t *imgdata;
 
@@ -87,10 +86,9 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
     icookie = xcb_xfixes_get_cursor_image(display->c);
 
     ir = xcb_xfixes_get_cursor_image_reply(display->c, icookie, &error);
-    if (error)
-    {
+    if (error) {
         g_error("Could not get cursor_image_reply; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return;
     }
 
@@ -98,24 +96,25 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
     imgdata = xcb_xfixes_get_cursor_image_cursor_image(ir);
 
     session_push_cursor_image(display->session,
-        ir->x, ir->y, ir->width, ir->height, ir->xhot, ir->yhot,
-        imglen * sizeof(*imgdata), (uint8_t *) imgdata);
+                              ir->x, ir->y, ir->width, ir->height, ir->xhot, ir->yhot,
+                              imglen * sizeof(*imgdata), (uint8_t *) imgdata);
 
     free(ir);
 }
 
-static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *dev, pixman_region16_t *damage_region)
+static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *dev,
+                                 pixman_region16_t * damage_region)
 {
     int i, n;
     pixman_box16_t *p;
 
     g_debug("Damage Notify [seq %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
-        dev->sequence, dev->level, dev->level & 0x80,
-        dev->area.width, dev->area.height, dev->area.x, dev->area.y,
-        dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+            dev->sequence, dev->level, dev->level & 0x80,
+            dev->area.width, dev->area.height, dev->area.x, dev->area.y,
+            dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
 
     pixman_region_union_rect(damage_region, damage_region,
-        dev->area.x, dev->area.y, dev->area.width, dev->area.height);
+                             dev->area.x, dev->area.y, dev->area.width, dev->area.height);
 
     /* The MORE flag is 0x80 on the level field; the proto documentation
        is wrong on this point.  Check the xorg server code to see */
@@ -123,34 +122,34 @@ static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *
         return;
 
     xcb_damage_subtract(display->c, display->damage,
-        XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
+                        XCB_XFIXES_REGION_NONE, XCB_XFIXES_REGION_NONE);
 
     p = pixman_region_rectangles(damage_region, &n);
 
     for (i = 0; i < n; i++)
         scanner_push(&display->session->scanner, DAMAGE_SCAN_REPORT,
-                p[i].x1, p[i].y1, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
+                     p[i].x1, p[i].y1, p[i].x2 - p[i].x1, p[i].y2 - p[i].y1);
 
     pixman_region_clear(damage_region);
 }
 
 static void handle_configure_notify(display_t *display, xcb_configure_notify_event_t *cev)
 {
-    g_debug("%s:[event %u|window %u|above_sibling %u|x %d|y %d|width %d|height %d|border_width %d|override_redirect %d]",
-       __func__, cev->event, cev->window, cev->above_sibling, cev->x, cev->y,
-       cev->width, cev->height, cev->border_width, cev->override_redirect);
-    if (cev->window != display->root)
-    {
+    g_debug
+        ("%s:[event %u|window %u|above_sibling %u|x %d|y %d|width %d|height %d|border_width %d|override_redirect %d]",
+         __func__, cev->event, cev->window, cev->above_sibling, cev->x, cev->y, cev->width,
+         cev->height, cev->border_width, cev->override_redirect);
+    if (cev->window != display->root) {
         g_debug("not main window; skipping.");
         return;
     }
-    
+
     display->width = cev->width;
     display->height = cev->height;
     session_handle_resize(display->session);
 }
 
-static void * handle_xevents(void *opaque)
+static void *handle_xevents(void *opaque)
 {
     display_t *display = (display_t *) opaque;
     xcb_generic_event_t *ev = NULL;
@@ -159,8 +158,7 @@ static void * handle_xevents(void *opaque)
     pixman_region_init(&damage_region);
 
     // FIXME - we do not have a good way to cause this thread to exit gracefully
-    while ((ev = xcb_wait_for_event(display->c)))
-    {
+    while ((ev = xcb_wait_for_event(display->c))) {
         if (ev->response_type == display->xfixes_ext->first_event + XCB_XFIXES_CURSOR_NOTIFY)
             handle_cursor_notify(display, (xcb_xfixes_cursor_notify_event_t *) ev);
 
@@ -175,7 +173,7 @@ static void * handle_xevents(void *opaque)
 
         free(ev);
 
-        if (display->session && ! session_alive(display->session))
+        if (display->session && !session_alive(display->session))
             break;
     }
 
@@ -189,17 +187,16 @@ static void * handle_xevents(void *opaque)
 
 static int register_for_events(display_t *d)
 {
-    uint32_t events = XCB_EVENT_MASK_STRUCTURE_NOTIFY; // FIXME - do we need this? | XCB_EVENT_MASK_POINTER_MOTION;
+    uint32_t events = XCB_EVENT_MASK_STRUCTURE_NOTIFY;  // FIXME - do we need this? | XCB_EVENT_MASK_POINTER_MOTION;
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
 
-    cookie = xcb_change_window_attributes_checked(d->c, d->root,
-                XCB_CW_EVENT_MASK, &events);
+    cookie = xcb_change_window_attributes_checked(d->c, d->root, XCB_CW_EVENT_MASK, &events);
     error = xcb_request_check(d->c, cookie);
-    if (error)
-    {
-        fprintf(stderr, "Error:  Could not register normal events; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+    if (error) {
+        fprintf(stderr,
+                "Error:  Could not register normal events; type %d; code %d; major %d; minor %d\n",
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NOEVENTS;
     }
 
@@ -221,16 +218,16 @@ int display_open(display_t *d, options_t *options)
     xcb_screen_t *screen;
 
     d->c = xcb_connect(options->display, &scr);
-    if (! d->c)
-    {
-        fprintf(stderr, "Error:  could not open display %s\n", options->display ? options->display : "");
+    if (!d->c) {
+        fprintf(stderr, "Error:  could not open display %s\n",
+                options->display ? options->display : "");
         return X11SPICE_ERR_NODISPLAY;
     }
 
     screen = screen_of_display(d->c, scr);
-    if (!screen)
-    {
-        fprintf(stderr, "Error:  could not get screen for display %s\n", options->display ? options->display : "");
+    if (!screen) {
+        fprintf(stderr, "Error:  could not get screen for display %s\n",
+                options->display ? options->display : "");
         return X11SPICE_ERR_NODISPLAY;
     }
     d->root = screen->root;
@@ -239,63 +236,63 @@ int display_open(display_t *d, options_t *options)
     d->depth = screen->root_depth;
 
     d->damage_ext = xcb_get_extension_data(d->c, &xcb_damage_id);
-    if (! d->damage_ext)
-    {
-        fprintf(stderr, "Error:  XDAMAGE not found on display %s\n", options->display ? options->display : "");
+    if (!d->damage_ext) {
+        fprintf(stderr, "Error:  XDAMAGE not found on display %s\n",
+                options->display ? options->display : "");
         return X11SPICE_ERR_NODAMAGE;
     }
 
     dcookie = xcb_damage_query_version(d->c, XCB_DAMAGE_MAJOR_VERSION, XCB_DAMAGE_MINOR_VERSION);
     damage_version = xcb_damage_query_version_reply(d->c, dcookie, &error);
-    if (error)
-    {
+    if (error) {
         fprintf(stderr, "Error:  Could not query damage; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NODAMAGE;
     }
     free(damage_version);
 
     d->damage = xcb_generate_id(d->c);
-    cookie = xcb_damage_create_checked(d->c, d->damage, d->root, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
+    cookie =
+        xcb_damage_create_checked(d->c, d->damage, d->root, XCB_DAMAGE_REPORT_LEVEL_RAW_RECTANGLES);
     error = xcb_request_check(d->c, cookie);
-    if (error)
-    {
+    if (error) {
         fprintf(stderr, "Error:  Could not create damage; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NODAMAGE;
     }
 
     d->shm_ext = xcb_get_extension_data(d->c, &xcb_shm_id);
-    if (! d->shm_ext)
-    {
-        fprintf(stderr, "Error:  XSHM not found on display %s\n", options->display ? options->display : "");
+    if (!d->shm_ext) {
+        fprintf(stderr, "Error:  XSHM not found on display %s\n",
+                options->display ? options->display : "");
         return X11SPICE_ERR_NOSHM;
     }
 
     d->xfixes_ext = xcb_get_extension_data(d->c, &xcb_xfixes_id);
-    if (! d->xfixes_ext)
-    {
-        fprintf(stderr, "Error:  XFIXES not found on display %s\n", options->display ? options->display : "");
+    if (!d->xfixes_ext) {
+        fprintf(stderr, "Error:  XFIXES not found on display %s\n",
+                options->display ? options->display : "");
         return X11SPICE_ERR_NOXFIXES;
     }
 
     xcb_xfixes_query_version(d->c, XCB_XFIXES_MAJOR_VERSION, XCB_XFIXES_MINOR_VERSION);
 
-    cookie = xcb_xfixes_select_cursor_input_checked(d->c, d->root, XCB_XFIXES_CURSOR_NOTIFY_MASK_DISPLAY_CURSOR);
+    cookie =
+        xcb_xfixes_select_cursor_input_checked(d->c, d->root,
+                                               XCB_XFIXES_CURSOR_NOTIFY_MASK_DISPLAY_CURSOR);
     error = xcb_request_check(d->c, cookie);
-    if (error)
-    {
-        fprintf(stderr, "Error:  Could not select cursor input; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+    if (error) {
+        fprintf(stderr,
+                "Error:  Could not select cursor input; type %d; code %d; major %d; minor %d\n",
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NOXFIXES;
     }
 
     use_cookie = xcb_xkb_use_extension(d->c, XCB_XKB_MAJOR_VERSION, XCB_XKB_MINOR_VERSION);
     use_reply = xcb_xkb_use_extension_reply(d->c, use_cookie, &error);
-    if (error)
-    {
+    if (error) {
         fprintf(stderr, "Could not get use reply; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NO_XKB;
     }
     free(use_reply);
@@ -312,7 +309,7 @@ int display_open(display_t *d, options_t *options)
     return rc;
 }
 
-shm_image_t * create_shm_image(display_t *d, int w, int h)
+shm_image_t *create_shm_image(display_t *d, int w, int h)
 {
     shm_image_t *shmi;
     int imgsize;
@@ -320,20 +317,19 @@ shm_image_t * create_shm_image(display_t *d, int w, int h)
     xcb_generic_error_t *error;
 
     shmi = calloc(1, sizeof(*shmi));
-    if (! shmi)
+    if (!shmi)
         return shmi;
 
     shmi->w = w ? w : d->width;
     shmi->h = h ? h : d->height;
 
-    shmi->bytes_per_line = (bits_per_pixel(d) / 8)  * shmi->w;
+    shmi->bytes_per_line = (bits_per_pixel(d) / 8) * shmi->w;
     imgsize = shmi->bytes_per_line * shmi->h;
 
     shmi->shmid = shmget(IPC_PRIVATE, imgsize, IPC_CREAT | 0700);
     if (shmi->shmid != -1)
         shmi->shmaddr = shmat(shmi->shmid, 0, 0);
-    if (shmi->shmid == -1 || shmi->shmaddr == (void *) -1)
-    {
+    if (shmi->shmid == -1 || shmi->shmaddr == (void *) -1) {
         g_error("Cannot get shared memory of size %d; errno %d", imgsize, errno);
         free(shmi);
         return NULL;
@@ -345,10 +341,9 @@ shm_image_t * create_shm_image(display_t *d, int w, int h)
     shmi->shmseg = xcb_generate_id(d->c);
     cookie = xcb_shm_attach_checked(d->c, shmi->shmseg, shmi->shmid, 0);
     error = xcb_request_check(d->c, cookie);
-    if (error)
-    {
+    if (error) {
         g_error("Could not attach; type %d; code %d; major %d; minor %d\n",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                error->response_type, error->error_code, error->major_code, error->minor_code);
         return NULL;
     }
 
@@ -362,11 +357,10 @@ int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y)
     xcb_shm_get_image_reply_t *reply;
 
     cookie = xcb_shm_get_image(d->c, d->root, x, y, shmi->w, shmi->h,
-                ~0, XCB_IMAGE_FORMAT_Z_PIXMAP, shmi->shmseg, 0);
+                               ~0, XCB_IMAGE_FORMAT_Z_PIXMAP, shmi->shmseg, 0);
 
     reply = xcb_shm_get_image_reply(d->c, cookie, &e);
-    if (e)
-    {
+    if (e) {
         g_warning("xcb_shm_get_image from %dx%d into size %dx%d failed", x, y, shmi->w, shmi->h);
         return -1;
     }
@@ -383,20 +377,17 @@ int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_acro
 
     memset(tiles, 0, sizeof(*tiles) * tiles_across);
     ret = read_shm_image(d, d->scanline, 0, row);
-    if (ret == 0)
-    {
+    if (ret == 0) {
         uint32_t *old = ((uint32_t *) d->fullscreen->shmaddr) + row * d->fullscreen->w;
         uint32_t *new = ((uint32_t *) d->scanline->shmaddr);
         if (memcmp(old, new, sizeof(*old) * d->scanline->w) == 0)
             return 0;
 
         len = d->scanline->w / tiles_across;
-        for (i = 0; i < tiles_across; i++, old += len, new += len)
-        {
+        for (i = 0; i < tiles_across; i++, old += len, new += len) {
             if (i == tiles_across - 1)
                 len = d->scanline->w - (i * len);
-            if (memcmp(old, new, sizeof(*old) * len))
-            {
+            if (memcmp(old, new, sizeof(*old) * len)) {
                 ret++;
                 tiles[i]++;
             }
@@ -407,7 +398,8 @@ int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_acro
     fprintf(stderr, "%d: ", row);
     for (i = 0; i < tiles_across; i++)
         fprintf(stderr, "%c", tiles[i] ? 'X' : '-');
-    fprintf(stderr, "\n"); fflush(stderr);
+    fprintf(stderr, "\n");
+    fflush(stderr);
 #endif
 
     return ret;
@@ -426,8 +418,7 @@ void display_copy_image_into_fullscreen(display_t *d, shm_image_t *shmi, int x, 
     if (y + shmi->h > d->fullscreen->h)
         return;
 
-    for (i = 0; i < shmi->h; i++)
-    {
+    for (i = 0; i < shmi->h; i++) {
         memcpy(to, from, sizeof(*to) * shmi->w);
         from += shmi->w;
         to += d->fullscreen->w;
@@ -453,8 +444,7 @@ int display_create_screen_images(display_t *d)
         return X11SPICE_ERR_NOSHM;
 
     d->scanline = create_shm_image(d, 0, 1);
-    if (!d->scanline)
-    {
+    if (!d->scanline) {
         destroy_shm_image(d, d->fullscreen);
         d->fullscreen = NULL;
         return X11SPICE_ERR_NOSHM;
@@ -465,14 +455,12 @@ int display_create_screen_images(display_t *d)
 
 void display_destroy_screen_images(display_t *d)
 {
-    if (d->fullscreen)
-    {
+    if (d->fullscreen) {
         destroy_shm_image(d, d->fullscreen);
         d->fullscreen = NULL;
     }
 
-    if (d->scanline)
-    {
+    if (d->scanline) {
         destroy_shm_image(d, d->scanline);
         d->scanline = NULL;
     }
@@ -491,4 +479,3 @@ void display_close(display_t *d)
     display_destroy_screen_images(d);
     xcb_disconnect(d->c);
 }
-

@@ -31,8 +31,7 @@ typedef struct session_struct session_t;
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
-{
+typedef struct {
     int shmid;
     int w;
     int h;
@@ -40,10 +39,9 @@ typedef struct
     xcb_shm_seg_t shmseg;
     void *shmaddr;
     void *drawable_ptr;
-}shm_image_t;
+} shm_image_t;
 
-typedef struct
-{
+typedef struct {
     xcb_connection_t *c;
     xcb_window_t root;
     int width;
@@ -76,7 +74,7 @@ int display_start_event_thread(display_t *d);
 int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_across);
 void display_copy_image_into_fullscreen(display_t *d, shm_image_t *shmi, int x, int y);
 
-shm_image_t * create_shm_image(display_t *d, int w, int h);
+shm_image_t *create_shm_image(display_t *d, int w, int h);
 int read_shm_image(display_t *d, shm_image_t *shmi, int x, int y);
 void destroy_shm_image(display_t *d, shm_image_t *shmi);
 

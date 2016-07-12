@@ -52,7 +52,7 @@ session_t *global_session;
 
 void free_cursor_queue_item(gpointer data)
 {
-    QXLCursorCmd  *ccmd = (QXLCursorCmd *) data;
+    QXLCursorCmd *ccmd = (QXLCursorCmd *) data;
     spice_free_release((spice_release_t *) ccmd->release_info.id);
 }
 
@@ -65,10 +65,10 @@ void free_draw_queue_item(gpointer data)
 void *session_pop_draw(session_t *session)
 {
     void *ret = NULL;
-    if (! session || ! session->running)
+    if (!session || !session->running)
         return ret;
 
-    if (! g_mutex_trylock(&session->lock))
+    if (!g_mutex_trylock(&session->lock))
         return ret;
 
     ret = g_async_queue_try_pop(session->draw_queue);
@@ -82,20 +82,20 @@ int session_draw_waiting(session_t *session)
 {
     int ret = 0;
 
-    if (! session || ! session->running)
+    if (!session || !session->running)
         return 0;
 
-    if (! g_mutex_trylock(&session->lock))
+    if (!g_mutex_trylock(&session->lock))
         return ret;
 
     ret = g_async_queue_length(session->draw_queue);
     g_mutex_unlock(&session->lock);
-    return(ret);
+    return (ret);
 }
 
 void *session_pop_cursor(session_t *session)
 {
-    if (! session || ! session->running)
+    if (!session || !session->running)
         return NULL;
 
     return g_async_queue_try_pop(session->cursor_queue);
@@ -103,7 +103,7 @@ void *session_pop_cursor(session_t *session)
 
 int session_cursor_waiting(session_t *session)
 {
-    if (! session || ! session->running)
+    if (!session || !session->running)
         return 0;
 
     return g_async_queue_length(session->cursor_queue);
@@ -112,7 +112,7 @@ int session_cursor_waiting(session_t *session)
 void session_handle_key(session_t *session, uint8_t keycode, int is_press)
 {
     xcb_test_fake_input(session->display.c, is_press ? XCB_KEY_PRESS : XCB_KEY_RELEASE,
-        keycode, XCB_CURRENT_TIME, XCB_NONE, 0, 0, 0);
+                        keycode, XCB_CURRENT_TIME, XCB_NONE, 0, 0, 0);
     g_debug("key 0x%x, press %d", keycode, is_press);
     // FIXME - and maybe a sync too... xcb_flush(s->display.c);
     xcb_flush(session->display.c);
@@ -121,7 +121,7 @@ void session_handle_key(session_t *session, uint8_t keycode, int is_press)
 void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state)
 {
     xcb_test_fake_input(session->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
-        session->display.root, x, y, 0);
+                        session->display.root, x, y, 0);
     xcb_flush(session->display.c);
 }
 
@@ -133,7 +133,7 @@ static void session_handle_button_change(session_t *s, uint32_t buttons_state)
         if ((buttons_state ^ s->spice.buttons_state) & (1 << i)) {
             int action = (buttons_state & (1 << i));
             xcb_test_fake_input(s->display.c, action ? XCB_BUTTON_PRESS : XCB_BUTTON_RELEASE,
-                i + 1, XCB_CURRENT_TIME, s->display.root, 0, 0, 0);
+                                i + 1, XCB_CURRENT_TIME, s->display.root, 0, 0, 0);
         }
     }
     s->spice.buttons_state = buttons_state;
@@ -147,9 +147,9 @@ static uint32_t convert_spice_buttons(int wheel, uint32_t buttons_state)
         ((buttons_state & SPICE_MOUSE_BUTTON_MASK_MIDDLE) << 1) |
         ((buttons_state & SPICE_MOUSE_BUTTON_MASK_RIGHT) >> 1) |
         (buttons_state & ~(SPICE_MOUSE_BUTTON_MASK_LEFT | SPICE_MOUSE_BUTTON_MASK_MIDDLE
-                          |SPICE_MOUSE_BUTTON_MASK_RIGHT));
-    return buttons_state | (wheel > 0 ? (1<<4) : 0)
-                         | (wheel < 0 ? (1<<3) : 0);
+                           | SPICE_MOUSE_BUTTON_MASK_RIGHT));
+    return buttons_state | (wheel > 0 ? (1 << 4) : 0)
+                         | (wheel < 0 ? (1 << 3) : 0);
 }
 
 
@@ -212,10 +212,9 @@ int session_create(session_t *s)
 
 static void flush_and_lock(session_t *s)
 {
-    while (1)
-    {
+    while (1) {
         g_mutex_lock(&s->lock);
-        if (! s->draw_command_in_progress)
+        if (!s->draw_command_in_progress)
             break;
 
         g_mutex_unlock(&s->lock);
@@ -235,8 +234,7 @@ int session_recreate_primary(session_t *s)
     display_destroy_screen_images(&s->display);
 
     rc = display_create_screen_images(&s->display);
-    if (rc == 0)
-    {
+    if (rc == 0) {
         shm_image_t *f = s->display.fullscreen;
         rc = spice_create_primary(&s->spice, f->w, f->h, f->bytes_per_line, f->shmaddr);
     }
@@ -247,13 +245,11 @@ int session_recreate_primary(session_t *s)
 
 void session_handle_resize(session_t *s)
 {
-    if (s->display.width == s->spice.width &&
-        s->display.height == s->spice.height)
+    if (s->display.width == s->spice.width && s->display.height == s->spice.height)
         return;
 
     g_debug("resizing from %dx%d to %dx%d",
-        s->spice.width, s->spice.height,
-        s->display.width, s->display.height);
+            s->spice.width, s->spice.height, s->display.width, s->display.height);
     session_recreate_primary(s);
 }
 
@@ -273,14 +269,14 @@ int session_alive(session_t *s)
 }
 
 int session_push_cursor_image(session_t *s,
-        int x, int y, int w, int h, int xhot, int yhot,
-        int imglen, uint8_t *imgdata)
+                              int x, int y, int w, int h, int xhot, int yhot,
+                              int imglen, uint8_t *imgdata)
 {
-    QXLCursorCmd  *ccmd;
-    QXLCursor     *cursor;
+    QXLCursorCmd *ccmd;
+    QXLCursor *cursor;
 
     ccmd = calloc(1, sizeof(*ccmd) + sizeof(*cursor) + imglen);
-    if (! ccmd)
+    if (!ccmd)
         return X11SPICE_ERR_MALLOC;;
 
     cursor = (QXLCursor *) (ccmd + 1);
@@ -326,25 +322,22 @@ int session_get_one_led(session_t *session, const char *name)
 
     atom_cookie = xcb_intern_atom(session->display.c, 0, strlen(name), name);
     atom_reply = xcb_intern_atom_reply(session->display.c, atom_cookie, &error);
-    if (error)
-    {
+    if (error) {
         g_warning("Could not get atom; type %d; code %d; major %d; minor %d",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                  error->response_type, error->error_code, error->major_code, error->minor_code);
         return 0;
     }
 
     indicator_cookie = xcb_xkb_get_named_indicator(session->display.c,
-                         XCB_XKB_ID_USE_CORE_KBD,
-                         XCB_XKB_LED_CLASS_DFLT_XI_CLASS,
-                         XCB_XKB_ID_DFLT_XI_ID,
-                         atom_reply->atom);
+                                                   XCB_XKB_ID_USE_CORE_KBD,
+                                                   XCB_XKB_LED_CLASS_DFLT_XI_CLASS,
+                                                   XCB_XKB_ID_DFLT_XI_ID, atom_reply->atom);
     free(atom_reply);
 
     indicator_reply = xcb_xkb_get_named_indicator_reply(session->display.c, indicator_cookie, &error);
-    if (error)
-    {
+    if (error) {
         g_warning("Could not get indicator; type %d; code %d; major %d; minor %d",
-            error->response_type, error->error_code, error->major_code, error->minor_code);
+                  error->response_type, error->error_code, error->major_code, error->minor_code);
         return 0;
     }
 
@@ -366,4 +359,3 @@ void session_remote_disconnected(void)
         return;
     gui_remote_disconnected(&global_session->gui);
 }
-

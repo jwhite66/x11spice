@@ -1,0 +1,62 @@
+#!/bin/bash
+#
+#   spice_indent
+#       This utility was used by Jeremy White to attempt to make the
+#   x11spice code largely conform to the Spice Project Coding Style.
+#   It's preserved here as a form of documentation.
+
+if [ ! -f "$1" ] ; then
+    echo Error: specify a filename to process with indent
+    exit 1
+fi
+
+indent "$1" \
+  --no-space-after-function-call-names \
+  --dont-break-procedure-type \
+  --braces-after-func-def-line \
+  --braces-on-if-line \
+  --braces-on-struct-decl-line \
+  --line-length 100 \
+  --no-space-after-parentheses \
+  --no-tabs \
+  --case-indentation 4 \
+  --tab-size 4\
+  --indent-label 0\
+  --indent-level 4\
+  --declaration-indentation 1 \
+  --space-after-for \
+  --space-after-while \
+  --space-after-casts \
+  --space-after-if \
+  -T agent_t \
+  -T SpiceCharDeviceInstance \
+  -T SpiceChannelEventInfo \
+  -T QXLInstance \
+  -T QXLWorker \
+  -T QXLDevInitInfo \
+  -T VDAgentMonitorsConfig \
+  -T SpiceTimer \
+  -T SpiceKbdInstance \
+  -T SpiceTabletInstance \
+  -T SpiceWatch \
+  -T GIOChannel \
+  -T spice_t \
+  -T options_t \
+  -T uint8_t  \
+  -T uint16_t  \
+  -T uint32_t  \
+  -T scan_type_t \
+  -T scan_report_t \
+  -T scanner_t \
+  -T session_t \
+  -T shm_image_t \
+  -T spice_release_t \
+  -T xcb_connection_t \
+  -T xcb_xfixes_cursor_notify_event_t \
+  -T xcb_damage_notify_event_t \
+  -T xcb_damage_notify_event_t \
+  -T xcb_configure_notify_event_t \
+  -T display_t \
+  -T gui_t  \
+  -T GKeyFile \
+  -T gchar \

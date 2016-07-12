@@ -40,8 +40,7 @@ static void uinput_handle_key(agent_t *agent, struct input_event *ev)
 {
     int button = 0;
 
-    switch (ev->code)
-    {
+    switch (ev->code) {
         case BTN_LEFT:
             button = 1 << 0;
             break;
@@ -77,8 +76,7 @@ static void uinput_handle_relative(agent_t *agent, struct input_event *ev)
 
 static void uinput_handle_absolute(agent_t *agent, struct input_event *ev)
 {
-    switch (ev->code)
-    {
+    switch (ev->code) {
         case ABS_X:
             agent->uinput_x = ev->value;
             break;
@@ -90,7 +88,8 @@ static void uinput_handle_absolute(agent_t *agent, struct input_event *ev)
             return;
             break;
     }
-    session_handle_mouse_position(agent->spice->session, agent->uinput_x, agent->uinput_y, agent->uinput_buttons_state);
+    session_handle_mouse_position(agent->spice->session, agent->uinput_x, agent->uinput_y,
+                                  agent->uinput_buttons_state);
 }
 
 static void uinput_read_cb(int fd, int event, void *opaque)
@@ -100,8 +99,8 @@ static void uinput_read_cb(int fd, int event, void *opaque)
     int rc;
 
     rc = read(agent->uinput_fd, agent->uinput_buffer + agent->uinput_offset,
-                sizeof(agent->uinput_buffer) - agent->uinput_offset);
-    if (rc  == -1) {
+              sizeof(agent->uinput_buffer) - agent->uinput_offset);
+    if (rc == -1) {
         if (errno != EAGAIN && errno != EINTR && errno != EWOULDBLOCK) {
             fprintf(stderr, "x11spice: uinput read failed: %s\n", strerror(errno));
         }
@@ -110,16 +109,13 @@ static void uinput_read_cb(int fd, int event, void *opaque)
 
     agent->uinput_offset += rc;
 
-    while (agent->uinput_offset >= sizeof(*ev))
-    {
+    while (agent->uinput_offset >= sizeof(*ev)) {
         ev = (struct input_event *) agent->uinput_buffer;
         agent->uinput_offset -= sizeof(*ev);
         if (agent->uinput_offset > 0)
-            memmove(agent->uinput_buffer, agent->uinput_buffer + sizeof(*ev),
-                agent->uinput_offset);
+            memmove(agent->uinput_buffer, agent->uinput_buffer + sizeof(*ev), agent->uinput_offset);
 
-        switch (ev->type)
-        {
+        switch (ev->type) {
             case EV_KEY:
                 uinput_handle_key(agent, ev);
                 break;
@@ -143,23 +139,22 @@ static int start_uinput(agent_t *agent, const char *uinput_filename)
     int rc;
 
     rc = mkfifo(uinput_filename, 0666);
-    if (rc != 0)
-    {
+    if (rc != 0) {
         fprintf(stderr, "spice: failed to create uinput fifo %s: %s\n",
                 uinput_filename, strerror(errno));
         return -1;
     }
 
     agent->uinput_fd = open(uinput_filename, O_RDONLY | O_NONBLOCK, 0666);
-    if (agent->uinput_fd == -1)
-    {
+    if (agent->uinput_fd == -1) {
         fprintf(stderr, "spice: failed creating uinput file %s: %s\n",
-               uinput_filename, strerror(errno));
+                uinput_filename, strerror(errno));
         return -1;
     }
 
     agent->uinput_watch = agent->spice->core->watch_add(agent->uinput_fd,
-                            SPICE_WATCH_EVENT_READ, uinput_read_cb, agent);
+                                                        SPICE_WATCH_EVENT_READ, uinput_read_cb,
+                                                        agent);
 
     return 0;
 }
@@ -185,14 +180,13 @@ static void stop_virtio(agent_t *agent)
         agent->spice->core->watch_remove(agent->virtio_listen_watch);
     agent->virtio_listen_watch = NULL;
 
-    if (agent->virtio_client_fd != -1)
-    {
+    if (agent->virtio_client_fd != -1) {
         spice_server_remove_interface(&agent->base.base);
         close(agent->virtio_client_fd);
     }
     if (agent->virtio_listen_fd != -1)
         close(agent->virtio_listen_fd);
-    agent->virtio_client_fd = agent->virtio_listen_fd -1;
+    agent->virtio_client_fd = agent->virtio_listen_fd - 1;
 }
 
 
@@ -264,7 +258,8 @@ static void on_accept(int fd, int event, void *opaque)
 
     // FIXME - not cool to accept more than one connection?
 
-    agent->virtio_client_fd = accept(agent->virtio_listen_fd, (struct sockaddr *)&address, &length);
+    agent->virtio_client_fd =
+        accept(agent->virtio_listen_fd, (struct sockaddr *) &address, &length);
     if (agent->virtio_client_fd == -1) {
         fprintf(stderr, "error accepting on unix domain socket: %s\n", strerror(errno));
         return;
@@ -283,8 +278,9 @@ static void on_accept(int fd, int event, void *opaque)
         return;
     }
 
-    agent->virtio_client_watch = agent->spice->core->watch_add(agent->virtio_client_fd, SPICE_WATCH_EVENT_READ,
-                                                        on_read_available, agent);
+    agent->virtio_client_watch =
+        agent->spice->core->watch_add(agent->virtio_client_fd, SPICE_WATCH_EVENT_READ,
+                                      on_read_available, agent);
 
     spice_server_add_interface(agent->spice->server, &agent->base.base);
 }
@@ -301,7 +297,7 @@ static int start_virtio(agent_t *agent, const char *virtio_path)
     }
     address.sun_family = AF_UNIX;
     snprintf(address.sun_path, sizeof(address.sun_path), "%s", virtio_path);
-    rc = bind(agent->virtio_listen_fd, (struct sockaddr *)&address, sizeof(address));
+    rc = bind(agent->virtio_listen_fd, (struct sockaddr *) &address, sizeof(address));
     if (rc != 0) {
         fprintf(stderr, "error binding unix domain socket to %s: %s\n",
                 virtio_path, strerror(errno));
@@ -315,7 +311,8 @@ static int start_virtio(agent_t *agent, const char *virtio_path)
     }
 
     agent->virtio_listen_watch = agent->spice->core->watch_add(agent->virtio_listen_fd,
-                                    SPICE_WATCH_EVENT_READ, on_accept, agent);
+                                                               SPICE_WATCH_EVENT_READ, on_accept,
+                                                               agent);
 
     return 0;
 
@@ -327,16 +324,16 @@ int agent_start(spice_t *spice, options_t *options, agent_t *agent)
 
     const static SpiceCharDeviceInterface agent_sif = {
         .base = {
-            .type = SPICE_INTERFACE_CHAR_DEVICE,
-            .description = "x11spice vdagent",
-            .major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
-            .minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
-        },
-        .state              = agent_char_state,
-        .write              = agent_char_write,
-        .read               = agent_char_read,
+                 .type = SPICE_INTERFACE_CHAR_DEVICE,
+                 .description = "x11spice vdagent",
+                 .major_version = SPICE_INTERFACE_CHAR_DEVICE_MAJOR,
+                 .minor_version = SPICE_INTERFACE_CHAR_DEVICE_MINOR,
+                 },
+        .state = agent_char_state,
+        .write = agent_char_write,
+        .read = agent_char_read,
 #if SPICE_SERVER_VERSION >= 0x000c02
-        .event              = agent_char_event,
+        .event = agent_char_event,
 #endif
     };
 
@@ -346,7 +343,7 @@ int agent_start(spice_t *spice, options_t *options, agent_t *agent)
     agent->base.subtype = "vdagent";
     agent->virtio_listen_fd = agent->virtio_client_fd = agent->uinput_fd = -1;
 
-    if (! options->virtio_path || ! options->uinput_path)
+    if (!options->virtio_path || !options->uinput_path)
         return 0;
 
     rc = start_virtio(agent, options->virtio_path);
@@ -354,8 +351,7 @@ int agent_start(spice_t *spice, options_t *options, agent_t *agent)
         return rc;
 
     rc = start_uinput(agent, options->uinput_path);
-    if (rc)
-    {
+    if (rc) {
         stop_virtio(agent);
         return rc;
     }

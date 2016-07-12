@@ -40,8 +40,7 @@ void options_init(options_t *options)
 
 void options_free(options_t *options)
 {
-    if (options->display)
-    {
+    if (options->display) {
         free(options->display);
         options->display = NULL;
     }
@@ -69,14 +68,14 @@ void options_free(options_t *options)
 }
 
 
-static gchar * string_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gchar *key)
+static gchar *string_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gchar *key)
 {
     gchar *ret = NULL;
     GError *error = NULL;
 
     if (u)
         ret = g_key_file_get_string(u, section, key, &error);
-    if ((! u || error) && s)
+    if ((!u || error) && s)
         ret = g_key_file_get_string(s, section, key, NULL);
     if (error)
         g_error_free(error);
@@ -91,7 +90,7 @@ static gint int_option(GKeyFile *u, GKeyFile *s, const gchar *section, const gch
 
     if (u)
         ret = g_key_file_get_integer(u, section, key, &error);
-    if ((! u || error) && s)
+    if ((!u || error) && s)
         ret = g_key_file_get_integer(s, section, key, NULL);
     if (error)
         g_error_free(error);
@@ -106,13 +105,14 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
 
     if (u)
         ret = g_key_file_get_boolean(u, section, key, &error);
-    if ((! u || error) && s)
+    if ((!u || error) && s)
         ret = g_key_file_get_boolean(s, section, key, NULL);
     if (error)
         g_error_free(error);
 
     return ret;
 }
+
 static void usage(options_t *options, char *argv0)
 {
     int len = strlen(argv0);
@@ -120,7 +120,8 @@ static void usage(options_t *options, char *argv0)
     fprintf(stderr, "%*.*s  [--auto=<listen-spec>] [--generate-passcode]\n", len, len, "");
     fprintf(stderr, "%*.*s  [--hide] [--minimize]\n", len, len, "");
     fprintf(stderr, "Command line parameters override settings in %s\n", options->user_config_file);
-    fprintf(stderr, "which overrides settings in %s\n", options->system_config_file ? options->system_config_file : "the system config file");
+    fprintf(stderr, "which overrides settings in %s\n",
+            options->system_config_file ? options->system_config_file : "the system config file");
 }
 
 int options_parse_arguments(int argc, char *argv[], options_t *options)
@@ -146,17 +147,14 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
         {0, 0, 0, 0}
     };
 
-    while (1)
-    {
+    while (1) {
         rc = getopt_long_only(argc, argv, "", long_options, &longindex);
-        if (rc == -1)
-        {
+        if (rc == -1) {
             rc = 0;
             break;
         }
 
-        switch (rc)
-        {
+        switch (rc) {
             case OPTION_VIEWONLY:
                 /* FIXME - implement --viewonly */
                 options->viewonly = 1;
@@ -199,20 +197,19 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
 void options_from_config(options_t *options)
 {
-    GKeyFile * userkey = g_key_file_new();
-    GKeyFile * systemkey = g_key_file_new();
+    GKeyFile *userkey = g_key_file_new();
+    GKeyFile *systemkey = g_key_file_new();
 
     options->user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice", NULL);
 
-    if(!g_key_file_load_from_file(userkey, options->user_config_file, G_KEY_FILE_NONE, NULL))
-    {
+    if (!g_key_file_load_from_file(userkey, options->user_config_file, G_KEY_FILE_NONE, NULL)) {
         g_key_file_free(userkey);
         userkey = NULL;
     }
 
-    if (!g_key_file_load_from_dirs(systemkey, "x11spice", (const char**)g_get_system_config_dirs(),
-            &options->system_config_file, G_KEY_FILE_NONE, NULL))
-    {
+    if (!g_key_file_load_from_dirs(systemkey, "x11spice",
+                                   (const char **) g_get_system_config_dirs(),
+                                   &options->system_config_file, G_KEY_FILE_NONE, NULL)) {
         g_key_file_free(systemkey);
         systemkey = NULL;
     }
@@ -238,7 +235,8 @@ void options_from_config(options_t *options)
     if (userkey)
         g_key_file_free(userkey);
 
-    g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr, options->disable_ticketing, options->spice_port);
+    g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr,
+            options->disable_ticketing, options->spice_port);
 }
 
 #if defined(OPTIONS_MAIN)

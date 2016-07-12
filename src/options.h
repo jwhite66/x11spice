@@ -24,23 +24,22 @@
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
-{
+typedef struct {
     /* Both config and command line arguments */
     long timeout;
-    int  minimize;
-    int  viewonly;
-    int  generate_passcode;
-    int  hide;
+    int minimize;
+    int viewonly;
+    int generate_passcode;
+    int hide;
     char *display;
     char *autouri;
 
     /* config only */
     char *spice_addr;
-    int  spice_port;
+    int spice_port;
     char *spice_password;
-    int  disable_ticketing;
-    int  exit_on_disconnect;
+    int disable_ticketing;
+    int exit_on_disconnect;
     char *virtio_path;
     char *uinput_path;
 

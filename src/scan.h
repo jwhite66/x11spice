@@ -32,8 +32,7 @@ typedef struct session_struct session_t;
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 
-typedef struct
-{
+typedef struct {
     scan_type_t type;
     int x;
     int y;
@@ -41,12 +40,11 @@ typedef struct
     int h;
 } scan_report_t;
 
-typedef struct
-{
+typedef struct {
     pthread_t thread;
     GAsyncQueue *queue;
     session_t *session;
-    GMutex  lock;
+    GMutex lock;
     int current_scanline;
 } scanner_t;
 

@@ -31,8 +31,7 @@ typedef struct session_struct session_t;
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
-{
+typedef struct {
     SpiceServer *server;
     SpiceCoreInterface *core;
     QXLInstance display_sin;
@@ -54,8 +53,7 @@ typedef struct
 
 typedef enum { RELEASE_SHMI, RELEASE_MEMORY } release_type_t;
 
-typedef struct
-{
+typedef struct {
     release_type_t type;
     void *data;
     spice_t *s;

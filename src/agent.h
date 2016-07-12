@@ -27,8 +27,7 @@
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
-{
+typedef struct {
     SpiceCharDeviceInstance base;
 
     int virtio_listen_fd;

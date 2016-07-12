@@ -26,8 +26,7 @@
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
-typedef struct
-{
+typedef struct {
     GtkWidget *window;
     GtkWidget *button_box;
     GtkWidget *quit_button;

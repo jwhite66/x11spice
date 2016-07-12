@@ -53,7 +53,7 @@ void gui_remote_disconnected(gui_t *gui)
 
 int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 {
-    if (! gtk_init_check(&argc, &argv))
+    if (!gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
 
     gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -71,14 +71,15 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
 
     gui->quit_button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
     gtk_container_add(GTK_CONTAINER(gui->button_box), gui->quit_button);
-    g_signal_connect_swapped(gui->quit_button, "clicked", G_CALLBACK (gtk_widget_destroy), gui->window);
+    g_signal_connect_swapped(gui->quit_button, "clicked", G_CALLBACK(gtk_widget_destroy),
+                             gui->window);
 
     gtk_widget_show(gui->status_label);
     gtk_widget_show(gui->disconnect_button);
     gtk_widget_show(gui->quit_button);
     gtk_widget_show(gui->button_box);
 
-    if (! hidden)
+    if (!hidden)
         gtk_widget_show(gui->window);
     if (minimize)
         gtk_window_iconify(GTK_WINDOW(gui->window));
@@ -105,7 +106,7 @@ int main(int argc, char *argv[])
 {
     gui_t gui;
 
-    setlocale (LC_ALL, "");
+    setlocale(LC_ALL, "");
     gui_create(&gui, argc, argv, 0, 0);
     gui_run(&gui);
     gui_destroy(&gui);

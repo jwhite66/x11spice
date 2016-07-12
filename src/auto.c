@@ -63,18 +63,16 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
 
     p = auto_spec + strlen(auto_spec) - 1;
     /* Look for a form of NNNN-NNNN at the end of the line */
-    for (; p >= auto_spec && *p; p--)
-    {
+    for (; p >= auto_spec && *p; p--) {
         /* Skip trailing white space */
-        if (isspace(*p) && ! hyphen && ! trailing)
+        if (isspace(*p) && !hyphen && !trailing)
             continue;
 
         /* We're looking for only digits and a hyphen */
         if (*p != '-' && !isdigit(*p))
             break;
 
-        if (*p == '-')
-        {
+        if (*p == '-') {
             if (hyphen)
                 return X11SPICE_ERR_PARSE;
             hyphen++;
@@ -96,11 +94,11 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
         *port_end = strtol(p + 1, NULL, 0);
 
     /* If we had a hyphen, make sure we had a NNNN-NNN pattern too... */
-    if (hyphen && (! leading || ! trailing))
+    if (hyphen && (!leading || !trailing))
         return X11SPICE_ERR_PARSE;
 
     /* If we got a port range, make sure we had either no address provided,
-        or a clear addr:NNNN-NNNN specficiation */
+       or a clear addr:NNNN-NNNN specficiation */
     if (leading || trailing)
         if (p > auto_spec && *p != ':')
             return X11SPICE_ERR_PARSE;
@@ -109,8 +107,7 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
         p--;
 
     len = p - auto_spec + 1;
-    if (len > 0)
-    {
+    if (len > 0) {
         *addr = calloc(1, len + 1);
         memcpy(*addr, auto_spec, len);
     }
@@ -142,15 +139,15 @@ static int try_port(const char *addr, int port)
         if (sock < 0)
             continue;
 
-        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void*)&on, sizeof(on));
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (void *) &on, sizeof(on));
         /* listen on both ipv4 and ipv6 */
         if (e->ai_family == PF_INET6)
-            setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void*)&off, sizeof(off));
+            setsockopt(sock, IPPROTO_IPV6, IPV6_V6ONLY, (void *) &off, sizeof(off));
 
         if (bind(sock, e->ai_addr, e->ai_addrlen) == 0) {
-            char uaddr[INET6_ADDRSTRLEN+1];
+            char uaddr[INET6_ADDRSTRLEN + 1];
             char uport[33];
-            rc = getnameinfo((struct sockaddr*)e->ai_addr, e->ai_addrlen,
+            rc = getnameinfo((struct sockaddr *) e->ai_addr, e->ai_addrlen,
                              uaddr, INET6_ADDRSTRLEN, uport, sizeof(uport) - 1,
                              NI_NUMERICHOST | NI_NUMERICSERV);
             if (rc == 0)
@@ -187,11 +184,9 @@ int auto_listen_port_fd(const char *addr, int start, int end)
     if (end == -1)
         end = start;
 
-    for (i = start; i <= end; i++)
-    {
+    for (i = start; i <= end; i++) {
         rc = try_port(addr, i);
-        if (rc >= 0)
-        {
+        if (rc >= 0) {
             printf("URI=%s:%d\n", addr ? addr : "", i);
             return rc;
         }

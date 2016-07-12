@@ -45,7 +45,7 @@ static void sigterm_handler(int arg)
 
 static void handle_sigterm(void)
 {
-    struct sigaction act = {};
+    struct sigaction act = { };
     act.sa_handler = sigterm_handler;
     sigaction(SIGTERM, &act, NULL);
 }
@@ -54,13 +54,13 @@ int main(int argc, char *argv[])
 {
     int rc;
 
-    session_t   session;
+    session_t session;
 
-    int         display_opened = 0;
-    int         spice_started = 0;
-    int         gui_created = 0;
-    int         session_created = 0;
-    int         session_started = 0;
+    int display_opened = 0;
+    int spice_started = 0;
+    int gui_created = 0;
+    int session_created = 0;
+    int session_started = 0;
 
     /*------------------------------------------------------------------------
     **  Parse arguments
@@ -125,8 +125,7 @@ exit:
     if (session_started)
         session_end(&session);
 
-    if (spice_started)
-    {
+    if (spice_started) {
         agent_stop(&session.agent);
         spice_end(&session.spice);
     }

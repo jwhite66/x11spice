@@ -50,10 +50,10 @@
 #define SCAN_ROW_THRESHOLD          (NUM_HORIZONTAL_TILES / 2)
 
 static int scanlines[NUM_SCANLINES] = {
-	 0, 16,  8, 24,  4, 20, 12, 28,
-	10, 26, 18,  2, 22,  6, 30, 14,
-	 1, 17,  9, 25,  7, 23, 15, 31,
-	19,  3, 27, 11, 29, 13,  5, 21
+    0, 16, 8, 24, 4, 20, 12, 28,
+    10, 26, 18, 2, 22, 6, 30, 14,
+    1, 17, 9, 25, 7, 23, 15, 31,
+    19, 3, 27, 11, 29, 13, 5, 21
 };
 
 
@@ -65,7 +65,7 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
     int i;
 
     drawable = calloc(1, sizeof(*drawable) + sizeof(*qxl_image));
-    if (! drawable)
+    if (!drawable)
         return NULL;
     qxl_image = (QXLImage *) (drawable + 1);
 
@@ -89,7 +89,7 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
      *  FIXME - explore this instead of blindly copying...
      */
     for (i = 0; i < 3; ++i)
-	drawable->surfaces_dest[i] = -1;
+        drawable->surfaces_dest[i] = -1;
 
     drawable->u.copy.src_area.left = 0;
     drawable->u.copy.src_area.top = 0;
@@ -131,7 +131,7 @@ static guint64 get_timeout(scanner_t *scanner)
 
 static void save_ximage_pnm(shm_image_t *shmi)
 {
-    int x,y;
+    int x, y;
     guint32 *pixel;
     static int count = 0;
     char fname[200];
@@ -141,16 +141,12 @@ static void save_ximage_pnm(shm_image_t *shmi)
 
     pixel = (guint32 *) shmi->shmaddr;
 
-    fprintf(fp,"P3\n%d %d\n255\n", shmi->w, shmi->h);
-    for (y=0; y<shmi->h; y++)
-    {
-        for (x=0; x<shmi->w; x++)
-        {
-            fprintf(fp,"%u %u %u\n",
-                ((*pixel)&0x0000ff)>>0,
-                ((*pixel)&0x00ff00)>>8,
-                ((*pixel)&0xff0000)>>16
-                );
+    fprintf(fp, "P3\n%d %d\n255\n", shmi->w, shmi->h);
+    for (y = 0; y < shmi->h; y++) {
+        for (x = 0; x < shmi->w; x++) {
+            fprintf(fp, "%u %u %u\n",
+                    ((*pixel) & 0x0000ff) >> 0,
+                    ((*pixel) & 0x00ff00) >> 8, ((*pixel) & 0xff0000) >> 16);
             pixel++;
         }
     }
@@ -162,22 +158,19 @@ static void handle_scan_report(session_t *session, scan_report_t *r)
     shm_image_t *shmi;
 
     shmi = create_shm_image(&session->display, r->w, r->h);
-    if (!shmi)
-    {
+    if (!shmi) {
         g_debug("Unexpected failure to create_shm_image of area %dx%d", r->w, r->h);
         return;
     }
 
-    if (read_shm_image(&session->display, shmi, r->x, r->y) == 0)
-    {
+    if (read_shm_image(&session->display, shmi, r->x, r->y) == 0) {
         //save_ximage_pnm(shmi);
         g_mutex_lock(&session->lock);
         display_copy_image_into_fullscreen(&session->display, shmi, r->x, r->y);
         g_mutex_unlock(&session->lock);
 
         QXLDrawable *drawable = shm_image_to_drawable(&session->spice, shmi, r->x, r->y);
-        if (drawable)
-        {
+        if (drawable) {
             g_async_queue_push(session->draw_queue, drawable);
             spice_qxl_wakeup(&session->spice.display_sin);
             // FIXME - Note that shmi is not cleaned up at this point
@@ -200,7 +193,8 @@ static void free_queue_item(gpointer data)
 }
 
 /* Note: session lock must be held by caller */
-static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, int end_row, int end_col)
+static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, int end_row,
+                              int end_col)
 {
     int x = (scanner->session->display.fullscreen->w / NUM_HORIZONTAL_TILES) * start_col;
     int w = (scanner->session->display.fullscreen->w / NUM_HORIZONTAL_TILES) * (end_col - start_col + 1);
@@ -217,25 +211,22 @@ static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, 
     scanner_push(scanner, SCANLINE_SCAN_REPORT, x, y, w, h);
 }
 
-static void grow_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row, int tiles_changed[][NUM_HORIZONTAL_TILES])
+static void grow_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row,
+                               int tiles_changed[][NUM_HORIZONTAL_TILES])
 {
     int i;
     int j;
-    for (i = 0; i < NUM_SCANLINES; i++)
-    {
-        if (! tiles_changed_in_row[i] || tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES)
+    for (i = 0; i < NUM_SCANLINES; i++) {
+        if (!tiles_changed_in_row[i] || tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES)
             continue;
 
-        if (tiles_changed_in_row[i] > SCAN_ROW_THRESHOLD)
-        {
+        if (tiles_changed_in_row[i] > SCAN_ROW_THRESHOLD) {
             tiles_changed_in_row[i] = NUM_HORIZONTAL_TILES;
             continue;
         }
 
-        for (j = 0; j < NUM_HORIZONTAL_TILES; j++)
-        {
-            if (! tiles_changed[i][j])
-            {
+        for (j = 0; j < NUM_HORIZONTAL_TILES; j++) {
+            if (!tiles_changed[i][j]) {
                 int grow = 0;
 
                 /* You get good optimzations from having multiple rows,
@@ -248,11 +239,10 @@ static void grow_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row, in
 
                 /* Otherwise, require that growing 'fills' a gap */
                 else if (j > 0 && j < (NUM_HORIZONTAL_TILES - 1) &&
-                     tiles_changed[i][j - 1] && tiles_changed[i][j + 1])
+                         tiles_changed[i][j - 1] && tiles_changed[i][j + 1])
                     grow++;
 
-                if (grow)
-                {
+                if (grow) {
                     tiles_changed[i][j]++;
                     tiles_changed_in_row[i]++;
                 }
@@ -272,18 +262,14 @@ static void push_changes_across_rows(scanner_t *scanner, int *tiles_changed_in_r
     int start_row = -1;
     int current_row = -1;
 
-    for (i = 0; i < NUM_SCANLINES; i++)
-    {
-        if (tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES)
-        {
+    for (i = 0; i < NUM_SCANLINES; i++) {
+        if (tiles_changed_in_row[i] == NUM_HORIZONTAL_TILES) {
             if (start_row == -1)
                 start_row = i;
             current_row = i;
         }
-        else
-        {
-            if (current_row != -1)
-            {
+        else {
+            if (current_row != -1) {
                 push_tiles_report(scanner, start_row, 0, current_row, NUM_HORIZONTAL_TILES - 1);
                 start_row = current_row = -1;
             }
@@ -301,12 +287,9 @@ static void push_changes_in_one_row(scanner_t *scanner, int row, int *tiles_chan
     int start_tile = -1;
     int current_tile = -1;
 
-    for (i = 0; i < NUM_HORIZONTAL_TILES; i++)
-    {
-        if (tiles_changed[i] == 0)
-        {
-            if (current_tile != -1)
-            {
+    for (i = 0; i < NUM_HORIZONTAL_TILES; i++) {
+        if (tiles_changed[i] == 0) {
+            if (current_tile != -1) {
                 push_tiles_report(scanner, row, start_tile, row, current_tile);
                 start_tile = current_tile = -1;
             }
@@ -321,7 +304,8 @@ static void push_changes_in_one_row(scanner_t *scanner, int row, int *tiles_chan
         push_tiles_report(scanner, row, start_tile, row, current_tile);
 }
 
-static void push_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row, int tiles_changed[][NUM_HORIZONTAL_TILES])
+static void push_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row,
+                               int tiles_changed[][NUM_HORIZONTAL_TILES])
 {
     int i = 0;
 
@@ -349,15 +333,13 @@ static void scanner_periodic(scanner_t *scanner)
     offset = scanlines[scanner->current_scanline++];
     scanner->current_scanline %= NUM_SCANLINES;
 
-    for (y = offset, i = 0; i < NUM_SCANLINES; i++, y += h)
-    {
+    for (y = offset, i = 0; i < NUM_SCANLINES; i++, y += h) {
         if (y >= scanner->session->display.fullscreen->h)
             y = scanner->session->display.fullscreen->h - 1;
 
         rc = display_find_changed_tiles(&scanner->session->display,
-                y, tiles_changed[i], NUM_HORIZONTAL_TILES);
-        if (rc < 0)
-        {
+                                        y, tiles_changed[i], NUM_HORIZONTAL_TILES);
+        if (rc < 0) {
             g_mutex_unlock(&scanner->session->lock);
             return;
         }
@@ -370,21 +352,18 @@ static void scanner_periodic(scanner_t *scanner)
     g_mutex_unlock(&scanner->session->lock);
 }
 
-static void * scanner_run(void *opaque)
+static void *scanner_run(void *opaque)
 {
     scanner_t *scanner = (scanner_t *) opaque;
-    while (session_alive(scanner->session))
-    {
+    while (session_alive(scanner->session)) {
         scan_report_t *r;
         r = (scan_report_t *) g_async_queue_timeout_pop(scanner->queue, get_timeout(scanner));
-        if (! r)
-        {
+        if (!r) {
             scanner_periodic(scanner);
             continue;
         }
 
-        if (r->type == EXIT_SCAN_REPORT)
-        {
+        if (r->type == EXIT_SCAN_REPORT) {
             free_queue_item(r);
             break;
         }
@@ -417,8 +396,7 @@ int scanner_destroy(scanner_t *scanner)
         rc = (int) (long) err;
 
     g_mutex_lock(&scanner->lock);
-    if (scanner->queue)
-    {
+    if (scanner->queue) {
         g_async_queue_unref(scanner->queue);
         scanner->queue = NULL;
     }
@@ -432,8 +410,7 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
     int rc = X11SPICE_ERR_MALLOC;
     scan_report_t *r = malloc(sizeof(*r));
 
-    if (r)
-    {
+    if (r) {
         r->type = type;
         r->x = x;
         r->y = y;
@@ -441,13 +418,11 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
         r->h = h;
 
         g_mutex_lock(&scanner->lock);
-        if (scanner->queue)
-        {
+        if (scanner->queue) {
             g_async_queue_push(scanner->queue, r);
             rc = 0;
         }
-        else
-        {
+        else {
             free(r);
             rc = X11SPICE_ERR_SHUTTING_DOWN;
         }
@@ -455,9 +430,9 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
     }
 
 #if defined(DEBUG_SCANLINES)
-    fprintf(stderr, "scan: %dx%d @ %dx%d\n", w, h, x, y); fflush(stderr);
+    fprintf(stderr, "scan: %dx%d @ %dx%d\n", w, h, x, y);
+    fflush(stderr);
 #endif
 
     return rc;
 }
-
