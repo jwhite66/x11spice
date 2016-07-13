@@ -1,0 +1,57 @@
+x11spice has taken x11vnc as an inspiration; that code base produces
+a fairly impressive result in terms of network efficiency, cpu efficiency, and
+overall user experience.
+
+In an attempt to fully understand how x11vnc performed that, Jeremy White did
+a fairly thorough analysis of the 'heart' of that algorithm, which was in scan.c.
+
+This is that analysis:
+
+Highest level is scan_for_updates()
+  - It clears global tile diff counters
+  - It has a scanlines pattern that it uses to scan for changes, in turn.  See scanlines.
+  - It will collect xdamage events
+    * This boils into marking tiles as having xdamage
+    * It doesn't entirely trust xdamage; there are apparently some items
+      where the damage reported is much larger than the actual change.
+  - Next major level is scan_display()
+    * It loops through vertical scanlines, NSCAN at a time
+    * First it checks xdamage; there is some complex logic that seems mostly aimed
+      at preventing the scan of a given scanline (that, I think, is mostly related
+      to the 2 second algorithm; see below)
+    * Next it does a memcmp on the whole line; if it's unchanged, it reloops
+    * If it's changed:
+      - It looks at x by NSCAN
+      - It does a memcmp to look for change; it uses xdamage as a hint
+        to avoid the memcmp.
+    * Net result is a number of changed tiles, and the tile global variables marking changes
+  - Next it consolidates tiles damaged by scan + xdamage
+  - Every 2 seconds it runs an algorithm to try to determine if xdamage is not
+      working.  If it detects that case (comment suggests opengl app), it turns off xdamage.
+  - It updates a 'nap_ok' global variable using an algorithm for how many tiles changed.
+    * iow, there is a complex set of algorithms that make it sleep more when there is high
+      load, low changes, or if xdamage is working well.
+    * It's quite complex.  The raw processing is a 20ms delay (50fps), but
+      it edits that heavily (see screen.c/choose_delay())
+  - Complex set of logic to determine if it should scan more.  Essentially, if
+      a fair number of tiles have changed, we scan again.  If more than about 50%
+      of tiles have changed, we just copy the whole screen
+  - Then it goes through the tiles, either in copy_all_tiles() or copy_all_tiles_run()
+    * Both rely heavily on a workhorse function, copy_tiles()
+      - It copies memory from X into an internal memory buffer
+      - It compares each line in the tile until it finds the first line with a change
+        * If no changes, it gets out
+        * It finds the last changed line in the tile
+        * It figures out if the first or last 'tile_fuzz' pixels in any line have changed;
+          if so, it flags those as having a left or right diff flag
+        * It figures out if the top or bottom 'tile_fuzz' lines have changed; if so, it
+          flags those tiles has having a top or bottom diff flag
+      - Finally, it copies that memory into the internal tracking buffer (aka rfb framebuffer)
+    * After it copies tiles, it will do a backwards pass, using the top/left flags
+      to decide to copy tiles.  
+    * If that results in many changes, it will do more scanning, 
+      at an odd (13) increment from NSCAN.
+    * If the up/left pass results in more than 4 tile diffs, it will attempt to grow_islands()
+    * Similarly, if there are more than 4 diffs, it will attempt to fill_tile_gaps()
+  - At the end of the loop, it calls hint_updates(), which will (eventually) tell the
+      rfb engine what areas have changed
