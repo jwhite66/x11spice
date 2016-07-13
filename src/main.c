@@ -71,6 +71,10 @@ int main(int argc, char *argv[])
     if (rc)
         goto exit;
 
+    rc = options_process_io(&session.options);
+    if (rc)
+        goto exit;
+
     /*------------------------------------------------------------------------
     **  Create the session
     **----------------------------------------------------------------------*/

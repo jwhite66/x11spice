@@ -22,6 +22,11 @@
 #define OPTIONS_H_
 
 /*----------------------------------------------------------------------------
+**  constants
+**--------------------------------------------------------------------------*/
+#define DEFAULT_PASSWORD_LENGTH     8
+
+/*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct {
@@ -29,7 +34,7 @@ typedef struct {
     long timeout;
     int minimize;
     int viewonly;
-    int generate_passcode;
+    int generate_password;
     int hide;
     char *display;
     char *autouri;
@@ -38,6 +43,7 @@ typedef struct {
     char *spice_addr;
     int spice_port;
     char *spice_password;
+    char *password_file;
     int disable_ticketing;
     int exit_on_disconnect;
     char *virtio_path;
@@ -54,6 +60,7 @@ typedef struct {
 **--------------------------------------------------------------------------*/
 void options_init(options_t *options);
 int options_parse_arguments(int argc, char *argv[], options_t *options);
+int options_process_io(options_t *options);
 void options_free(options_t *options);
 void options_from_config(options_t *options);
 
