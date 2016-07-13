@@ -217,7 +217,7 @@ void options_from_config(options_t *options)
     options->timeout = int_option(userkey, systemkey, "spice", "timeout");
     options->minimize = int_option(userkey, systemkey, "spice", "minimize");
     options->viewonly = int_option(userkey, systemkey, "spice", "viewonly");
-    options->generate_passcode = int_option(userkey, systemkey, "spice", "generate_passcode");
+    options->generate_passcode = int_option(userkey, systemkey, "spice", "generate-passcode");
     options->hide = int_option(userkey, systemkey, "spice", "hide");
     options->display = string_option(userkey, systemkey, "spice", "display");
     options->autouri = string_option(userkey, systemkey, "spice", "auto");
@@ -225,10 +225,10 @@ void options_from_config(options_t *options)
     options->spice_addr = string_option(userkey, systemkey, "spice", "addr");
     options->spice_password = string_option(userkey, systemkey, "spice", "password");
     options->spice_port = int_option(userkey, systemkey, "spice", "port");
-    options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable_ticketing");
-    options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit_on_disconnect");
-    options->virtio_path = string_option(userkey, systemkey, "spice", "virtio_path");
-    options->uinput_path = string_option(userkey, systemkey, "spice", "uinput_path");
+    options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable-ticketing");
+    options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit-on-disconnect");
+    options->virtio_path = string_option(userkey, systemkey, "spice", "virtio-path");
+    options->uinput_path = string_option(userkey, systemkey, "spice", "uinput-path");
 
     if (systemkey)
         g_key_file_free(systemkey);
