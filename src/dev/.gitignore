@@ -2,3 +2,4 @@ dummy.out
 vdagent.out
 vdagentd.out
 dummy.log.old
+valgrind.out

@@ -178,6 +178,7 @@ int session_start(session_t *s)
 {
     int rc = 0;
 
+    s->running = FALSE;
     s->spice.session = s;
     s->display.session = s;
     s->scanner.session = s;
@@ -190,7 +191,7 @@ int session_start(session_t *s)
     if (rc)
         return rc;
 
-    s->running = 1;
+    s->running = TRUE;
 
 end:
     global_session = s;

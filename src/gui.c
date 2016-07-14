@@ -125,12 +125,19 @@ void gui_destroy(gui_t *gui)
 
 #if defined(GUI_MAIN)
 #include <locale.h>
+#include <string.h>
+void session_disconnect_client(session_t *session)
+{
+}
+
 int main(int argc, char *argv[])
 {
     gui_t gui;
+    session_t session;
 
     setlocale(LC_ALL, "");
-    gui_create(&gui, argc, argv, 0, 0);
+    memset(&session, 0, sizeof(session));
+    gui_create(&gui, &session, argc, argv);
     gui_run(&gui);
     gui_destroy(&gui);
 }

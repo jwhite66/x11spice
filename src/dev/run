@@ -34,7 +34,13 @@ function dummy {
 }
 
 function do_valgrind {
-    valgrind --log-file=$ddir/valgrind.out $ddir/../x11spice $args $* 2>&1 &
+    valgrind --log-file=$ddir/valgrind.out \
+        --leak-check=full --show-leak-kinds=all \
+        --track-origins=yes \
+        --suppressions=$ddir/../tests/gui.supp \
+        --suppressions=$ddir/../tests/options.supp \
+        $* \
+        $ddir/../x11spice $args 2>&1 &
 }
 
 function session {

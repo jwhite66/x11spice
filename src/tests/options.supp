@@ -1,5 +1,5 @@
 # This was created by performing the following:
-#gcc -Wall -o options -DOPTIONS_MAIN options.c `pkg-config --cflags --libs gtk+-2.0`
+#gcc -Wall -o options -DOPTIONS_MAIN options.c `pkg-config --cflags --libs gtk+-2.0 spice-server`
 #valgrind --leak-check=full --show-leak-kinds=all --gen-suppressions=all --log-file=v.out ./options
 #grep -v ^= v.out
 #Hand editing to remove the fun:main in the g_log/main patterns; that should catch g_log leaks
@@ -37,8 +37,21 @@
    match-leak-kinds: reachable
    fun:malloc
    fun:g_private_get
+   fun:g_get_language_names
+   fun:g_key_file_init
+   fun:g_key_file_new
+   fun:options_from_config
+   fun:main
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:g_private_get
    fun:g_logv
    fun:g_log
+   fun:options_from_config
 }
 {
    <insert_a_suppression_name_here>
@@ -56,12 +69,15 @@
    Memcheck:Leak
    match-leak-kinds: reachable
    fun:malloc
-   fun:g_private_get
-   fun:g_get_language_names
-   fun:g_key_file_init
-   fun:g_key_file_new
-   fun:options_from_config
-   fun:main
+   fun:g_malloc
+   fun:g_strdup
+   fun:g_log_domain_new_L
+   fun:g_log_set_handler
+   fun:spice_log_init
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   obj:/lib/x86_64-linux-gnu/ld-2.19.so
 }
 {
    <insert_a_suppression_name_here>
@@ -1727,6 +1743,33 @@
    fun:g_malloc
    fun:_g_signal_init
    fun:gobject_init_ctor
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   obj:/lib/x86_64-linux-gnu/ld-2.19.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:g_malloc
+   fun:g_log_set_handler
+   fun:spice_log_init
+   fun:call_init.part.0
+   fun:call_init
+   fun:_dl_init
+   obj:/lib/x86_64-linux-gnu/ld-2.19.so
+}
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Leak
+   match-leak-kinds: reachable
+   fun:malloc
+   fun:g_malloc
+   fun:g_log_domain_new_L
+   fun:g_log_set_handler
+   fun:spice_log_init
    fun:call_init.part.0
    fun:call_init
    fun:_dl_init
