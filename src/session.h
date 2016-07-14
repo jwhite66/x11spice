@@ -51,7 +51,6 @@ typedef struct session_struct {
 **  Prototypes
 **--------------------------------------------------------------------------*/
 int session_create(session_t *s);
-void session_destroy(session_t *s);
 int session_start(session_t *s);
 void session_end(session_t *s);
 int session_alive(session_t *s);

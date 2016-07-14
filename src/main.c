@@ -59,7 +59,6 @@ int main(int argc, char *argv[])
     int display_opened = 0;
     int spice_started = 0;
     int gui_created = 0;
-    int session_created = 0;
     int session_started = 0;
 
     /*------------------------------------------------------------------------
@@ -81,7 +80,6 @@ int main(int argc, char *argv[])
     rc = session_create(&session);
     if (rc)
         goto exit;
-    session_created = 1;
 
     /*------------------------------------------------------------------------
     **  Open the display
@@ -140,9 +138,6 @@ exit:
         display_close(&session.display);
 
     options_free(&session.options);
-
-    if (session_created)
-        session_destroy(&session);
 
     return rc;
 }

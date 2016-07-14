@@ -200,25 +200,6 @@ end:
     return rc;
 }
 
-void session_end(session_t *s)
-{
-    s->running = 0;
-    global_session = NULL;
-
-    scanner_destroy(&s->scanner);
-
-    display_destroy_screen_images(&s->display);
-}
-
-int session_create(session_t *s)
-{
-    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
-    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
-    g_mutex_init(&s->lock);
-
-    return 0;
-}
-
 static void flush_and_lock(session_t *s)
 {
     while (1) {
@@ -230,6 +211,37 @@ static void flush_and_lock(session_t *s)
         // FIXME - g_threads?
         sched_yield();
     }
+}
+
+void session_end(session_t *s)
+{
+    s->running = 0;
+    global_session = NULL;
+
+    scanner_destroy(&s->scanner);
+
+    display_destroy_screen_images(&s->display);
+
+    flush_and_lock(s);
+
+    if (s->cursor_queue)
+        g_async_queue_unref(s->cursor_queue);
+    if (s->draw_queue)
+        g_async_queue_unref(s->draw_queue);
+    s->cursor_queue = NULL;
+    s->draw_queue = NULL;
+
+    g_mutex_unlock(&s->lock);
+
+}
+
+int session_create(session_t *s)
+{
+    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
+    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
+    g_mutex_init(&s->lock);
+
+    return 0;
 }
 
 /* Important note - this is meant to be called from
@@ -260,16 +272,6 @@ void session_handle_resize(session_t *s)
     g_debug("resizing from %dx%d to %dx%d",
             s->spice.width, s->spice.height, s->display.width, s->display.height);
     session_recreate_primary(s);
-}
-
-void session_destroy(session_t *s)
-{
-    if (s->cursor_queue)
-        g_async_queue_unref(s->cursor_queue);
-    if (s->draw_queue)
-        g_async_queue_unref(s->draw_queue);
-    s->cursor_queue = NULL;
-    s->draw_queue = NULL;
 }
 
 int session_alive(session_t *s)
