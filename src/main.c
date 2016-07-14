@@ -86,10 +86,9 @@ int main(int argc, char *argv[])
     /*------------------------------------------------------------------------
     **  Open the display
     **----------------------------------------------------------------------*/
-    rc = display_open(&session.display, &session.options);
+    rc = display_open(&session.display, &session);
     if (rc)
         goto exit;
-    session.display.session = &session;
     display_opened = 1;
 
     /*------------------------------------------------------------------------

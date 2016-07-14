@@ -204,7 +204,7 @@ static int register_for_events(display_t *d)
 }
 
 
-int display_open(display_t *d, options_t *options)
+int display_open(display_t *d, session_t *session)
 {
     int scr;
     int rc;
@@ -217,17 +217,19 @@ int display_open(display_t *d, options_t *options)
     xcb_generic_error_t *error;
     xcb_screen_t *screen;
 
-    d->c = xcb_connect(options->display, &scr);
+    d->session = session;
+
+    d->c = xcb_connect(session->options.display, &scr);
     if (!d->c) {
         fprintf(stderr, "Error:  could not open display %s\n",
-                options->display ? options->display : "");
+                session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NODISPLAY;
     }
 
     screen = screen_of_display(d->c, scr);
     if (!screen) {
         fprintf(stderr, "Error:  could not get screen for display %s\n",
-                options->display ? options->display : "");
+                session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NODISPLAY;
     }
     d->root = screen->root;
@@ -238,7 +240,7 @@ int display_open(display_t *d, options_t *options)
     d->damage_ext = xcb_get_extension_data(d->c, &xcb_damage_id);
     if (!d->damage_ext) {
         fprintf(stderr, "Error:  XDAMAGE not found on display %s\n",
-                options->display ? options->display : "");
+                session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NODAMAGE;
     }
 
@@ -264,14 +266,14 @@ int display_open(display_t *d, options_t *options)
     d->shm_ext = xcb_get_extension_data(d->c, &xcb_shm_id);
     if (!d->shm_ext) {
         fprintf(stderr, "Error:  XSHM not found on display %s\n",
-                options->display ? options->display : "");
+                session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NOSHM;
     }
 
     d->xfixes_ext = xcb_get_extension_data(d->c, &xcb_xfixes_id);
     if (!d->xfixes_ext) {
         fprintf(stderr, "Error:  XFIXES not found on display %s\n",
-                options->display ? options->display : "");
+                session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NOXFIXES;
     }
 
@@ -304,7 +306,7 @@ int display_open(display_t *d, options_t *options)
 
     rc = display_create_screen_images(d);
 
-    g_message("Display %s opened", options->display ? options->display : "");
+    g_message("Display %s opened", session->options.display ? session->options.display : "");
 
     return rc;
 }
