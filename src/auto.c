@@ -166,7 +166,7 @@ static int try_port(const char *addr, int port)
 
 listen:
     if (listen(sock, SOMAXCONN) != 0) {
-        fprintf(stderr, "listen: %s", strerror(errno));
+        perror("Error in listen");
         close(sock);
         return -1;
     }

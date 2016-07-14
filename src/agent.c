@@ -84,7 +84,7 @@ static void uinput_handle_absolute(agent_t *agent, struct input_event *ev)
             agent->uinput_y = ev->value;
             break;
         default:
-            fprintf(stderr, "%s: unknown axis %d, ignoring\n", __func__, ev->code);
+            g_debug("%s: unknown axis %d, ignoring\n", __func__, ev->code);
             return;
             break;
     }
@@ -102,7 +102,7 @@ static void uinput_read_cb(int fd, int event, void *opaque)
               sizeof(agent->uinput_buffer) - agent->uinput_offset);
     if (rc == -1) {
         if (errno != EAGAIN && errno != EINTR && errno != EWOULDBLOCK) {
-            fprintf(stderr, "x11spice: uinput read failed: %s\n", strerror(errno));
+            perror("Error - x11spice uinput read failed");
         }
         return;
     }
@@ -140,14 +140,14 @@ static int start_uinput(agent_t *agent, const char *uinput_filename)
 
     rc = mkfifo(uinput_filename, 0666);
     if (rc != 0) {
-        fprintf(stderr, "spice: failed to create uinput fifo %s: %s\n",
+        fprintf(stderr, "Error: failed to create uinput fifo %s: %s\n",
                 uinput_filename, strerror(errno));
         return -1;
     }
 
     agent->uinput_fd = open(uinput_filename, O_RDONLY | O_NONBLOCK, 0666);
     if (agent->uinput_fd == -1) {
-        fprintf(stderr, "spice: failed creating uinput file %s: %s\n",
+        fprintf(stderr, "Error: failed creating uinput file %s: %s\n",
                 uinput_filename, strerror(errno));
         return -1;
     }
@@ -200,7 +200,7 @@ static int agent_char_write(SpiceCharDeviceInstance *sin, const uint8_t *buf, in
 
     written = send(agent->virtio_client_fd, buf, len, 0);
     if (written != len)
-        fprintf(stderr, "%s: ERROR: short write to vdagentd - TODO buffering\n", __func__);
+        g_warning("%s: ERROR: short write to vdagentd - TODO buffering\n", __func__);
 
     return written;
 }
@@ -218,7 +218,7 @@ static int agent_char_read(SpiceCharDeviceInstance *sin, uint8_t *buf, int len)
         if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
             return 0;
         }
-        fprintf(stderr, "ERROR: vdagent died\n");
+        g_warning("ERROR: vdagent died\n");
 
         stop_virtio(agent);
         stop_uinput(agent);
@@ -261,19 +261,18 @@ static void on_accept(int fd, int event, void *opaque)
     agent->virtio_client_fd =
         accept(agent->virtio_listen_fd, (struct sockaddr *) &address, &length);
     if (agent->virtio_client_fd == -1) {
-        fprintf(stderr, "error accepting on unix domain socket: %s\n", strerror(errno));
+        perror("Error - accepting on unix domain socket");
         return;
     }
 
     flags = fcntl(agent->virtio_client_fd, F_GETFL);
     if (flags == -1) {
-        fprintf(stderr, "error getting flags from uds client fd: %s\n", strerror(errno));
+        perror("Error - getting flags from uds client fd");
         close(agent->virtio_client_fd);
         return;
     }
     if (fcntl(agent->virtio_client_fd, F_SETFL, flags | O_NONBLOCK | O_CLOEXEC) == -1) {
-        fprintf(stderr, "error setting CLOEXEC & NONBLOCK flags from uds client fd: %s\n",
-                strerror(errno));
+        perror("Error setting CLOEXEC & NONBLOCK flags from uds client fd");
         close(agent->virtio_client_fd);
         return;
     }
@@ -292,21 +291,21 @@ static int start_virtio(agent_t *agent, const char *virtio_path)
 
     agent->virtio_listen_fd = socket(PF_UNIX, SOCK_STREAM, 0);
     if (agent->virtio_listen_fd == -1) {
-        fprintf(stderr, "error creating unix domain socket\n");
+        perror("Error creating unix domain socket");
         return X11SPICE_ERR_NO_SOCKET;
     }
     address.sun_family = AF_UNIX;
     snprintf(address.sun_path, sizeof(address.sun_path), "%s", virtio_path);
     rc = bind(agent->virtio_listen_fd, (struct sockaddr *) &address, sizeof(address));
     if (rc != 0) {
-        fprintf(stderr, "error binding unix domain socket to %s: %s\n",
+        fprintf(stderr, "Error binding unix domain socket to %s: %s\n",
                 virtio_path, strerror(errno));
         return X11SPICE_ERR_BIND;
     }
 
     rc = listen(agent->virtio_listen_fd, 1);
     if (rc != 0) {
-        fprintf(stderr, "error listening to unix domain socket: %s\n", strerror(errno));
+        perror("Error listening to unix domain socket");
         return X11SPICE_ERR_LISTEN;
     }
 

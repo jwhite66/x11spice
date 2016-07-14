@@ -291,7 +291,7 @@ int display_open(display_t *d, options_t *options)
     use_cookie = xcb_xkb_use_extension(d->c, XCB_XKB_MAJOR_VERSION, XCB_XKB_MINOR_VERSION);
     use_reply = xcb_xkb_use_extension_reply(d->c, use_cookie, &error);
     if (error) {
-        fprintf(stderr, "Could not get use reply; type %d; code %d; major %d; minor %d\n",
+        fprintf(stderr, "Error: could not get use reply; type %d; code %d; major %d; minor %d\n",
                 error->response_type, error->error_code, error->major_code, error->minor_code);
         return X11SPICE_ERR_NO_XKB;
     }

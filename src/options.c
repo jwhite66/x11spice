@@ -124,12 +124,12 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
 static void usage(options_t *options, char *argv0)
 {
     int len = strlen(argv0);
-    fprintf(stderr, "%s: [--viewonly ] [--timeout=seconds] [--display=DISPLAY]\n", argv0);
-    fprintf(stderr, "%*.*s  [--password=<password>] [--password-file={-|<password-file>}]\n", len, len, "");
-    fprintf(stderr, "%*.*s  [--auto=<listen-spec>] [--generate-password[=len]]\n", len, len, "");
-    fprintf(stderr, "%*.*s  [--hide] [--minimize]\n", len, len, "");
-    fprintf(stderr, "Command line parameters override settings in %s\n", options->user_config_file);
-    fprintf(stderr, "which overrides settings in %s\n",
+    printf("%s: [--viewonly ] [--timeout=seconds] [--display=DISPLAY]\n", argv0);
+    printf("%*.*s  [--password=<password>] [--password-file={-|<password-file>}]\n", len, len, "");
+    printf("%*.*s  [--auto=<listen-spec>] [--generate-password[=len]]\n", len, len, "");
+    printf("%*.*s  [--hide] [--minimize]\n", len, len, "");
+    printf("Command line parameters override settings in %s\n", options->user_config_file);
+    printf("which overrides settings in %s\n",
             options->system_config_file ? options->system_config_file : "the system config file");
 }
 
