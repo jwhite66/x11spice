@@ -78,4 +78,5 @@ int session_push_cursor_image(session_t *s,
 void session_remote_connected(const char *from);
 void session_remote_disconnected(void);
 
+void session_disconnect_client(session_t *session);
 #endif

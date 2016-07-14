@@ -95,8 +95,7 @@ int main(int argc, char *argv[])
     /*------------------------------------------------------------------------
     **  Initialize the GUI
     **----------------------------------------------------------------------*/
-    rc = gui_create(&session.gui, argc, argv, session.options.minimize,
-                    session.options.hide, session.options.timeout);
+    rc = gui_create(&session.gui, &session, argc, argv);
     if (rc)
         goto exit;
     gui_created = 1;

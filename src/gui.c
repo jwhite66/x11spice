@@ -26,6 +26,7 @@
 **  loop, which is one of the main running threads of the x11spice program.
 **--------------------------------------------------------------------------*/
 #include "gui.h"
+#include "session.h"
 #include "x11spice.h"
 
 gui_t *cached_gui;
@@ -45,13 +46,18 @@ void gui_remote_connected(gui_t *gui, const char *details)
         g_source_remove(gui->timeout_id);
         gui->timeout_id = 0;
     }
-    // FIXME - disconnect should do something, but that looks hard
 }
 
 void gui_remote_disconnected(gui_t *gui)
 {
     gtk_label_set_text(GTK_LABEL(gui->status_label), "Waiting for connection");
     gtk_widget_set_sensitive(gui->disconnect_button, FALSE);
+}
+
+void gui_disconnect_clicked(GtkWidget *widget, gpointer data)
+{
+    gui_t *gui = (gui_t *)data;
+    session_disconnect_client(gui->session);
 }
 
 static gboolean timeout_if_no_connection(gpointer user_data)
@@ -61,11 +67,12 @@ static gboolean timeout_if_no_connection(gpointer user_data)
     return FALSE;
 }
 
-int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int timeout)
+int gui_create(gui_t *gui, session_t *session, int argc, char *argv[])
 {
     if (!gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
 
+    gui->session = session;
     gui->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     g_signal_connect(gui->window, "destroy", G_CALLBACK(gui_sigterm), NULL);
 
@@ -77,6 +84,7 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int
 
     gui->disconnect_button = gtk_button_new_from_stock(GTK_STOCK_DISCONNECT);
     gtk_container_add(GTK_CONTAINER(gui->button_box), gui->disconnect_button);
+    g_signal_connect(gui->disconnect_button, "clicked", G_CALLBACK(gui_disconnect_clicked), gui);
     gui_remote_disconnected(gui);
 
     gui->quit_button = gtk_button_new_from_stock(GTK_STOCK_QUIT);
@@ -89,13 +97,15 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int
     gtk_widget_show(gui->quit_button);
     gtk_widget_show(gui->button_box);
 
-    if (!hidden)
+    if (!session->options.hide)
         gtk_widget_show(gui->window);
-    if (minimize)
+    if (session->options.minimize)
         gtk_window_iconify(GTK_WINDOW(gui->window));
 
-    if (timeout)
-        gui->timeout_id = g_timeout_add_seconds(timeout, timeout_if_no_connection, gui);
+    gui->timeout_id = 0;
+    if (session->options.timeout)
+        gui->timeout_id = g_timeout_add_seconds(session->options.timeout,
+                                                timeout_if_no_connection, gui);
 
     return 0;
 }

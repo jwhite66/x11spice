@@ -23,6 +23,8 @@
 
 #include <gtk/gtk.h>
 
+typedef struct session_struct session_t;
+
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
@@ -32,13 +34,14 @@ typedef struct {
     GtkWidget *quit_button;
     GtkWidget *disconnect_button;
     GtkWidget *status_label;
+    session_t *session;
     int timeout_id;
 } gui_t;
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int timeout);
+int gui_create(gui_t *gui, session_t *session, int argc, char *argv[]);
 void gui_sigterm(void);
 void gui_run(gui_t *gui);
 void gui_destroy(gui_t *gui);

@@ -47,7 +47,7 @@
 ** So we use this global variable to enable the use of the session connect
 **  and disconnect notices from spice
 ----------------------------------------------------------------------------*/
-session_t *global_session;
+session_t *global_session = NULL;
 
 
 void free_cursor_queue_item(gpointer data)
@@ -352,6 +352,18 @@ int session_get_one_led(session_t *session, const char *name)
     ret = indicator_reply->on;
     free(indicator_reply);
     return ret;
+}
+
+void session_disconnect_client(session_t *session)
+{
+    /* 
+    ** TODO: This is using a side effect of set_ticket that is not intentional.
+    **       It would be better to ask for a deliberate method of achieving this result.
+    */
+    g_debug("client disconnect");
+    spice_server_set_ticket(session->spice.server, session->options.spice_password, 0, 0, TRUE);
+    if (! session->options.spice_password || session->options.disable_ticketing)
+        spice_server_set_noauth(session->spice.server);
 }
 
 void session_remote_connected(const char *from)

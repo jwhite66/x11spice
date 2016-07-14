@@ -657,10 +657,10 @@ void spice_end(spice_t *s)
     spice_server_remove_interface(&s->keyboard_sin.base);
     spice_server_remove_interface(&s->display_sin.base);
 
+    spice_destroy_primary(s);
+
     spice_server_destroy(s->server);
 
-    // FIXME - can't always destroy...
-    spice_destroy_primary(s);
 }
 
 spice_release_t *spice_create_release(spice_t *s, release_type_t type, void *data)
