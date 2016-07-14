@@ -1,0 +1,102 @@
+#!/bin/bash
+
+# Tool to facilitate running x11spice against a dummy Xorg server.
+
+run_debug=0
+run_valgrind=0
+run_vdagent=1
+just_vdagent=0
+
+export G_MESSAGES_DEBUG=all
+
+dn=`dirname $0`
+ddir=`(cd $dn; pwd)`
+
+xorg_args="-ac -config $ddir/dummy.xorg.conf -logfile $ddir/dummy.log"
+args="--auto 5900-5910"
+
+function cleanup {
+    rm -rf /tmp/xspice-vdagent
+    rm -rf /tmp/xspice-virtio
+    rm -rf /tmp/xspice-uinput
+}
+
+function run {
+    $ddir/../x11spice $args $@ 2>&1 &
+}
+
+function debug {
+    (echo set args $args $@; cat) | gdb $ddir/../x11spice
+}
+
+function dummy {
+    Xorg $xorg_args $* :1 >$ddir/dummy.out 2>&1 &
+}
+
+function do_valgrind {
+    valgrind --log-file=$ddir/valgrind.out $ddir/../x11spice $args $* 2>&1 &
+}
+
+function session {
+    DISPLAY=:1 xterm >/dev/null 2>&1 &
+    DISPLAY=:1 metacity >/dev/null 2>&1 &
+    export DISPLAY=:1
+
+}
+
+function vdagent {
+    sleep 1
+    DISPLAY=:1 spice-vdagentd -d -f -x -X -S /tmp/xspice-vdagent -s /tmp/xspice-virtio -u /tmp/xspice-uinput >$ddir/vdagentd.out 2>&1 &
+    sleep 1
+    vdagentdpid=$!
+
+    DISPLAY=:1 spice-vdagent -o 1 -d -x -S /tmp/xspice-vdagent -s /tmp/xspice-virtio >$ddir/vdagent.out 2>&1 &
+    vdagentpid=$!
+}
+
+if [ $# -ge 1 ] ; then
+    if [ $1 = "debug" ] ; then
+        run_debug=1
+    elif [ $1 = "vdagent" ] ; then
+        just_vdagent=1
+    elif [ $1 = "valgrind" ] ; then
+        run_valgrind=1
+    elif [ $1 != "run" ] ; then
+        echo Unknown parameter.
+        exit 2
+    fi
+    shift
+fi
+
+if [ $just_vdagent -gt 0 ] ; then
+    vdagent
+    exit
+fi
+
+cleanup
+dummy
+xpid=$!
+sleep 1
+session
+if [ $run_debug -gt 0 ] ; then
+    run_vdagent=0
+    debug $@
+elif [ $run_valgrind -gt 0 ] ; then
+    do_valgrind $@
+else
+    run $@
+fi
+x11spicepid=$!
+
+if [ $run_vdagent -eq 1 ] ; then
+    vdagent
+fi
+
+if [ $run_debug -eq 0 ] ; then
+    wait $x11spicepid
+fi
+
+kill $xpid 2>/dev/null
+if [ $run_vdagent -eq 1 ] ; then
+    kill $vdagentpid $vdagentdpid 2>/dev/null
+fi
