@@ -32,12 +32,13 @@ typedef struct {
     GtkWidget *quit_button;
     GtkWidget *disconnect_button;
     GtkWidget *status_label;
+    int timeout_id;
 } gui_t;
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden);
+int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int timeout);
 void gui_sigterm(void);
 void gui_run(gui_t *gui);
 void gui_destroy(gui_t *gui);

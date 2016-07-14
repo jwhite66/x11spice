@@ -168,12 +168,10 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
         switch (rc) {
             case OPTION_VIEWONLY:
-                /* FIXME - implement --viewonly */
                 options->viewonly = 1;
                 break;
 
             case OPTION_TIMEOUT:
-                /* FIXME - implement --timeout */
                 options->timeout = atol(optarg);
                 break;
 

@@ -41,6 +41,10 @@ void gui_remote_connected(gui_t *gui, const char *details)
     gtk_label_set_text(GTK_LABEL(gui->status_label), "Connection established");
     gtk_widget_set_tooltip_text(gui->status_label, details);
     gtk_widget_set_sensitive(gui->disconnect_button, TRUE);
+    if (gui->timeout_id > 0) {
+        g_source_remove(gui->timeout_id);
+        gui->timeout_id = 0;
+    }
     // FIXME - disconnect should do something, but that looks hard
 }
 
@@ -50,8 +54,14 @@ void gui_remote_disconnected(gui_t *gui)
     gtk_widget_set_sensitive(gui->disconnect_button, FALSE);
 }
 
+static gboolean timeout_if_no_connection(gpointer user_data)
+{
+    g_debug("Timeout waiting for connection.");
+    gtk_main_quit();
+    return FALSE;
+}
 
-int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
+int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden, int timeout)
 {
     if (!gtk_init_check(&argc, &argv))
         return X11SPICE_ERR_GTK_FAILED;
@@ -83,6 +93,9 @@ int gui_create(gui_t *gui, int argc, char *argv[], int minimize, int hidden)
         gtk_widget_show(gui->window);
     if (minimize)
         gtk_window_iconify(GTK_WINDOW(gui->window));
+
+    if (timeout)
+        gui->timeout_id = g_timeout_add_seconds(timeout, timeout_if_no_connection, gui);
 
     return 0;
 }
