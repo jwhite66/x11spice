@@ -87,7 +87,7 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
 
     ir = xcb_xfixes_get_cursor_image_reply(display->c, icookie, &error);
     if (error) {
-        g_error("Could not get cursor_image_reply; type %d; code %d; major %d; minor %d\n",
+        g_warning("Could not get cursor_image_reply; type %d; code %d; major %d; minor %d\n",
                 error->response_type, error->error_code, error->major_code, error->minor_code);
         return;
     }
@@ -330,7 +330,7 @@ shm_image_t *create_shm_image(display_t *d, int w, int h)
     if (shmi->shmid != -1)
         shmi->shmaddr = shmat(shmi->shmid, 0, 0);
     if (shmi->shmid == -1 || shmi->shmaddr == (void *) -1) {
-        g_error("Cannot get shared memory of size %d; errno %d", imgsize, errno);
+        g_warning("Cannot get shared memory of size %d; errno %d", imgsize, errno);
         free(shmi);
         return NULL;
     }
@@ -342,7 +342,7 @@ shm_image_t *create_shm_image(display_t *d, int w, int h)
     cookie = xcb_shm_attach_checked(d->c, shmi->shmseg, shmi->shmid, 0);
     error = xcb_request_check(d->c, cookie);
     if (error) {
-        g_error("Could not attach; type %d; code %d; major %d; minor %d\n",
+        g_warning("Could not attach; type %d; code %d; major %d; minor %d\n",
                 error->response_type, error->error_code, error->major_code, error->minor_code);
         return NULL;
     }
