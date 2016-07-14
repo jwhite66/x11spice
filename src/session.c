@@ -111,15 +111,20 @@ int session_cursor_waiting(session_t *session)
 
 void session_handle_key(session_t *session, uint8_t keycode, int is_press)
 {
+    if (session->options.viewonly)
+        return;
+
     xcb_test_fake_input(session->display.c, is_press ? XCB_KEY_PRESS : XCB_KEY_RELEASE,
                         keycode, XCB_CURRENT_TIME, XCB_NONE, 0, 0, 0);
     g_debug("key 0x%x, press %d", keycode, is_press);
-    // FIXME - and maybe a sync too... xcb_flush(s->display.c);
     xcb_flush(session->display.c);
 }
 
 void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state)
 {
+    if (session->options.viewonly)
+        return;
+
     xcb_test_fake_input(session->display.c, XCB_MOTION_NOTIFY, 0, XCB_CURRENT_TIME,
                         session->display.root, x, y, 0);
     xcb_flush(session->display.c);
@@ -129,6 +134,9 @@ void session_handle_mouse_position(session_t *session, int x, int y, uint32_t bu
 static void session_handle_button_change(session_t *s, uint32_t buttons_state)
 {
     int i;
+    if (s->options.viewonly)
+        return;
+
     for (i = 0; i < BUTTONS; i++) {
         if ((buttons_state ^ s->spice.buttons_state) & (1 << i)) {
             int action = (buttons_state & (1 << i));
