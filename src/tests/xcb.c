@@ -89,6 +89,8 @@ int xcb_draw_grid(const char *display)
 
     /* Open the connection to the X server */
     c = xcb_connect(display, NULL);
+    if (xcb_connection_has_error(c))
+        return 1;
 
     /* Get the first screen */
     screen = xcb_setup_roots_iterator(xcb_get_setup(c)).data;

@@ -78,24 +78,32 @@ void test_basic(xdummy_t *xserver, gconstpointer user_data)
         return;
 
     snprintf(buf, sizeof(buf), ":%s", xserver->display);
-    xcb_draw_grid(buf);
-
-    screencap = g_test_build_filename(G_TEST_BUILT, "run", test.name, "screencap.ppm", NULL);
-    needs_prefix = 1;
-    if (strlen(server.uri) >= 8 && memcmp(server.uri, "spice://", 8) == 0)
-        needs_prefix = 0;
-
-    snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
-        needs_prefix ? "spice://" : "", server.uri, screencap);
-    system(buf);
-
-    snprintf(buf, sizeof(buf), "md5sum basic.expected.ppm | "
-                               "sed -e 's!basic.expected.ppm!%s!' |" 
-                               "md5sum -c", screencap);
-    if (system(buf))
-    {
-        g_warning("Captured screenshot does not match expected one.");
+    if (xcb_draw_grid(buf)) {
+        g_warning("Could not draw the grid");
         g_test_fail();
+    } else {
+
+        screencap = g_test_build_filename(G_TEST_BUILT, "run", test.name, "screencap.ppm", NULL);
+        needs_prefix = 1;
+        if (strlen(server.uri) >= 8 && memcmp(server.uri, "spice://", 8) == 0)
+            needs_prefix = 0;
+
+        snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
+            needs_prefix ? "spice://" : "", server.uri, screencap);
+        system(buf);
+
+        snprintf(buf, sizeof(buf), "md5sum basic.expected.ppm | "
+                                   "sed -e 's!basic.expected.ppm!%s!' |" 
+                                   "md5sum -c", screencap);
+        if (system(buf)) {
+            snprintf(buf, sizeof(buf), "xwd -display :%s -root -out %s.xwd",
+                     xserver->display, screencap);
+            system(buf);
+
+            g_warning("%s does not match basic.expected.ppm", screencap);
+            g_warning("xwud -in %s.xwd should show you the current X screen.", screencap);
+            g_test_fail();
+        }
     }
 
     test_common_stop(&test, &server);
