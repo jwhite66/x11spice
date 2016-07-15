@@ -56,7 +56,11 @@ indent "$1" \
   -T xcb_damage_notify_event_t \
   -T xcb_damage_notify_event_t \
   -T xcb_configure_notify_event_t \
+  -T xcb_screen_t \
   -T display_t \
   -T gui_t  \
   -T GKeyFile \
   -T gchar \
+  -T xdummy_t \
+  -T x11spice_server_t \
+  -T test_t \

@@ -25,23 +25,21 @@
 #include "xcb.h"
 #include "x11spice_test.h"
 
-static int test_common_start(test_t *test, x11spice_server_t *server,
-        xdummy_t *xserver, gconstpointer user_data)
+static int test_common_start(test_t * test, x11spice_server_t * server,
+                             xdummy_t *xserver, gconstpointer user_data)
 {
     int rc;
 
-    if (! xserver->running)
-    {
+    if (!xserver->running) {
         g_test_skip("No server");
         return -1;
     }
 
     test->xserver = xserver;
-    test->name    = user_data;
+    test->name = user_data;
 
     test->logfile = g_test_build_filename(G_TEST_BUILT, "run", test->name, "test.log", NULL);
-    if (! test->logfile)
-    {
+    if (!test->logfile) {
         g_warning("Failed to create logfile");
         g_test_fail();
         return -1;
@@ -49,8 +47,7 @@ static int test_common_start(test_t *test, x11spice_server_t *server,
 
     memset(server, 0, sizeof(*server));
     rc = x11spice_start(server, test);
-    if (rc)
-    {
+    if (rc) {
         g_warning("Failed to start x11spice");
         g_test_fail();
         return rc;
@@ -59,7 +56,7 @@ static int test_common_start(test_t *test, x11spice_server_t *server,
     return 0;
 }
 
-static void test_common_stop(test_t *test, x11spice_server_t *server)
+static void test_common_stop(test_t * test, x11spice_server_t * server)
 {
     x11spice_stop(server);
 }
@@ -81,7 +78,8 @@ void test_basic(xdummy_t *xserver, gconstpointer user_data)
     if (xcb_draw_grid(buf)) {
         g_warning("Could not draw the grid");
         g_test_fail();
-    } else {
+    }
+    else {
 
         screencap = g_test_build_filename(G_TEST_BUILT, "run", test.name, "screencap.ppm", NULL);
         needs_prefix = 1;
@@ -89,12 +87,11 @@ void test_basic(xdummy_t *xserver, gconstpointer user_data)
             needs_prefix = 0;
 
         snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
-            needs_prefix ? "spice://" : "", server.uri, screencap);
+                 needs_prefix ? "spice://" : "", server.uri, screencap);
         system(buf);
 
         snprintf(buf, sizeof(buf), "md5sum basic.expected.ppm | "
-                                   "sed -e 's!basic.expected.ppm!%s!' |" 
-                                   "md5sum -c", screencap);
+                 "sed -e 's!basic.expected.ppm!%s!' |" "md5sum -c", screencap);
         if (system(buf)) {
             snprintf(buf, sizeof(buf), "xwd -display :%s -root -out %s.xwd",
                      xserver->display, screencap);

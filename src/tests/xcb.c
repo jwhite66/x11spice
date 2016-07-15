@@ -26,17 +26,19 @@
 #include <xcb/xcb.h>
 
 
-static void lookup_color(xcb_connection_t *c, xcb_screen_t *screen, const char *color, uint32_t *pixel)
+static void lookup_color(xcb_connection_t *c, xcb_screen_t *screen, const char *color,
+                         uint32_t *pixel)
 {
     xcb_lookup_color_cookie_t cookie;
     xcb_lookup_color_reply_t *r;
     xcb_alloc_color_cookie_t acookie;
     xcb_alloc_color_reply_t *ar;
-    
+
     cookie = xcb_lookup_color(c, screen->default_colormap, strlen(color), color);
     r = xcb_lookup_color_reply(c, cookie, NULL);
 
-    acookie = xcb_alloc_color(c, screen->default_colormap, r->exact_red, r->exact_green, r->exact_blue);
+    acookie =
+        xcb_alloc_color(c, screen->default_colormap, r->exact_red, r->exact_green, r->exact_blue);
     free(r);
 
     ar = xcb_alloc_color_reply(c, acookie, NULL);
@@ -44,30 +46,26 @@ static void lookup_color(xcb_connection_t *c, xcb_screen_t *screen, const char *
     free(ar);
 }
 
-static void create_rectangles(xcb_rectangle_t *red, xcb_rectangle_t *green, int w, int h)
+static void create_rectangles(xcb_rectangle_t * red, xcb_rectangle_t * green, int w, int h)
 {
     int x, y;
     int r, g;
     int i;
 
-    for (i = 0; i < 32; i++)
-    {
+    for (i = 0; i < 32; i++) {
         red[i].width = green[i].width = w / 8;
         red[i].height = green[i].height = h / 8;
     }
 
     r = g = 0;
     for (x = 0; x < 8; x++)
-        for (y = 0; y < 8; y++)
-        {
-            if (((y * 8) + x) % 2 == y % 2)
-            {
+        for (y = 0; y < 8; y++) {
+            if (((y * 8) + x) % 2 == y % 2) {
                 red[r].x = x * (w / 8);
                 red[r].y = y * (h / 8);
                 r++;
             }
-            else
-            {
+            else {
                 green[g].x = x * (w / 8);
                 green[g].y = y * (h / 8);
                 g++;
@@ -79,10 +77,10 @@ int xcb_draw_grid(const char *display)
 {
     uint32_t pixels[2];
 
-    xcb_connection_t    *c;
-    xcb_screen_t        *screen;
-    xcb_gcontext_t       red_fg;
-    xcb_gcontext_t       green_fg;
+    xcb_connection_t *c;
+    xcb_screen_t *screen;
+    xcb_gcontext_t red_fg;
+    xcb_gcontext_t green_fg;
 
     xcb_rectangle_t red_rectangles[32];
     xcb_rectangle_t green_rectangles[32];
@@ -105,14 +103,15 @@ int xcb_draw_grid(const char *display)
     pixels[1] = 0;
     xcb_create_gc(c, green_fg, screen->root, XCB_GC_FOREGROUND, pixels);
 
-    create_rectangles(red_rectangles, green_rectangles, screen->width_in_pixels, screen->height_in_pixels);
+    create_rectangles(red_rectangles, green_rectangles, screen->width_in_pixels,
+                      screen->height_in_pixels);
 
     /* We draw the rectangles */
     xcb_poly_fill_rectangle_checked(c, screen->root, red_fg, 32, red_rectangles);
     xcb_poly_fill_rectangle_checked(c, screen->root, green_fg, 32, green_rectangles);
 
     /* We flush the request */
-    xcb_flush (c);
+    xcb_flush(c);
 
     xcb_disconnect(c);
 

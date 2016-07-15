@@ -33,52 +33,52 @@
 
 #include "xdummy.h"
 
-static void write_xorg_conf(FILE *fp, xdummy_t *server, long vram)
+static void write_xorg_conf(FILE * fp, xdummy_t *server, long vram)
 {
 
     fprintf(fp,
-        "# This xorg configuration file is meant to be used by x11spice\n"
-        "# to start a dummy X11 server.\n"
-        "\n"
-        "Section \"ServerFlags\"\n"
-        "  Option \"DontVTSwitch\" \"true\"\n"
-        "  Option \"AllowMouseOpenFail\" \"true\"\n"
-        "  Option \"PciForceNone\" \"true\"\n"
-        "  Option \"AutoEnableDevices\" \"false\"\n"
-        "  Option \"AutoAddDevices\" \"false\"\n"
-        "EndSection\n"
-        "\n"
-        "Section \"InputDevice\"\n"
-        "  Identifier \"dummy_mouse\"\n"
-        "  Option \"CorePointer\" \"true\"\n"
-        "  Driver \"void\"\n"
-        "EndSection\n"
-        "\n"
-        "Section \"InputDevice\"\n"
-        "  Identifier \"dummy_keyboard\"\n"
-        "  Option \"CoreKeyboard\" \"true\"\n"
-        "  Driver \"void\"\n"
-        "EndSection\n"
-        "\n"
-        "Section \"Device\"\n"
-        "  Identifier \"dummy_videocard\"\n"
-        "  Driver \"dummy\"\n"
-        "  VideoRam %ld\n"
-        "EndSection\n"
-        "\n"
-        "Section \"Screen\"\n"
-        "  Identifier \"dummy_screen\"\n"
-        "  Device \"dummy_videocard\"\n"
-        "  Monitor \"dummy_monitor\"\n"
-        "  DefaultDepth 24\n"
-        "EndSection\n"
-        "\n"
-        "Section \"ServerLayout\"\n"
-        "  Identifier   \"dummy_layout\"\n"
-        "  Screen       \"dummy_screen\"\n"
-        "  InputDevice  \"dummy_mouse\"\n"
-        "  InputDevice  \"dummy_keyboard\"\n"
-        "EndSection\n", vram);
+            "# This xorg configuration file is meant to be used by x11spice\n"
+            "# to start a dummy X11 server.\n"
+            "\n"
+            "Section \"ServerFlags\"\n"
+            "  Option \"DontVTSwitch\" \"true\"\n"
+            "  Option \"AllowMouseOpenFail\" \"true\"\n"
+            "  Option \"PciForceNone\" \"true\"\n"
+            "  Option \"AutoEnableDevices\" \"false\"\n"
+            "  Option \"AutoAddDevices\" \"false\"\n"
+            "EndSection\n"
+            "\n"
+            "Section \"InputDevice\"\n"
+            "  Identifier \"dummy_mouse\"\n"
+            "  Option \"CorePointer\" \"true\"\n"
+            "  Driver \"void\"\n"
+            "EndSection\n"
+            "\n"
+            "Section \"InputDevice\"\n"
+            "  Identifier \"dummy_keyboard\"\n"
+            "  Option \"CoreKeyboard\" \"true\"\n"
+            "  Driver \"void\"\n"
+            "EndSection\n"
+            "\n"
+            "Section \"Device\"\n"
+            "  Identifier \"dummy_videocard\"\n"
+            "  Driver \"dummy\"\n"
+            "  VideoRam %ld\n"
+            "EndSection\n"
+            "\n"
+            "Section \"Screen\"\n"
+            "  Identifier \"dummy_screen\"\n"
+            "  Device \"dummy_videocard\"\n"
+            "  Monitor \"dummy_monitor\"\n"
+            "  DefaultDepth 24\n"
+            "EndSection\n"
+            "\n"
+            "Section \"ServerLayout\"\n"
+            "  Identifier   \"dummy_layout\"\n"
+            "  Screen       \"dummy_screen\"\n"
+            "  InputDevice  \"dummy_mouse\"\n"
+            "  InputDevice  \"dummy_keyboard\"\n"
+            "EndSection\n", vram);
 }
 
 static int generate_paths(xdummy_t *server, gconstpointer user_data)
@@ -101,19 +101,19 @@ static int generate_paths(xdummy_t *server, gconstpointer user_data)
 
 
     server->xorg_fname = g_test_build_filename(G_TEST_BUILT, "run", user_data, "xorg.conf", NULL);
-    if (! server->xorg_fname)
+    if (!server->xorg_fname)
         return -1;
 
     server->logfile = g_test_build_filename(G_TEST_BUILT, "run", user_data, "xorg.log", NULL);
-    if (! server->logfile)
+    if (!server->logfile)
         return -1;
 
     server->outfile = g_test_build_filename(G_TEST_BUILT, "run", user_data, "xorg.out", NULL);
-    if (! server->outfile)
+    if (!server->outfile)
         return -1;
 
     server->spicefile = g_test_build_filename(G_TEST_BUILT, "run", user_data, "spice.log", NULL);
-    if (! server->outfile)
+    if (!server->outfile)
         return -1;
 
     return 0;
@@ -125,7 +125,7 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
     char fdbuf[100];
 
     fp = fopen(server->xorg_fname, "w");
-    if (! fp)
+    if (!fp)
         return -1;
 
     write_xorg_conf(fp, server, 192000L);
@@ -137,18 +137,17 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
     snprintf(fdbuf, sizeof(fdbuf), "%d", server->pipe);
 
     return execlp("Xorg", "Xorg", "-ac",
-            "-config", server->xorg_fname,
-            "-logfile", server->logfile,
-            "-displayfd", fdbuf, NULL);
+                  "-config", server->xorg_fname,
+                  "-logfile", server->logfile, "-displayfd", fdbuf, NULL);
 }
 
 int redirect(gchar *fname)
 {
     int fd;
-    fd = open(fname, O_CREAT | O_WRONLY, S_IRUSR |S_IWUSR | S_IRGRP | S_IROTH);
+    fd = open(fname, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (fd <= 0)
         return -1;
-   
+
     dup2(fd, fileno(stdout));
     dup2(fd, fileno(stderr));
 
@@ -172,8 +171,7 @@ void start_server(xdummy_t *server, gconstpointer user_data)
         return;
 
     server->pid = fork();
-    if (server->pid == 0)
-    {
+    if (server->pid == 0) {
         close(fd[0]);
         server->pipe = fd[1];
         exec_xorg(server, user_data);
@@ -188,14 +186,12 @@ void start_server(xdummy_t *server, gconstpointer user_data)
             return;
     }
 
-    while (1)
-    {
+    while (1) {
         rc = read(server->pipe, buf + pos, sizeof(buf) - pos);
         if (rc == -1 && errno == EINTR)
             continue;
-    
-        if (rc <= 0)
-        {
+
+        if (rc <= 0) {
             g_warning("server failed to start.");
             return;
         }
@@ -228,16 +224,13 @@ int still_alive(int pid)
 void stop_server(xdummy_t *server, gconstpointer user_data)
 {
     g_message("server stopping; display %s", server->display);
-    if (server->running)
-    {
-        if (still_alive(server->pid))
-        {
+    if (server->running) {
+        if (still_alive(server->pid)) {
             kill(server->pid, SIGTERM);
             usleep(50 * 1000);
         }
 
-        if (still_alive(server->pid))
-        {
+        if (still_alive(server->pid)) {
             sleep(1);
             kill(server->pid, SIGKILL);
         }

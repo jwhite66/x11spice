@@ -41,9 +41,11 @@ static int exec_x11spice(x11spice_server_t *server, gchar *display)
     dup2(server->pipe, fileno(stderr));
 
     if (valgrind)
-        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s --auto localhost:5900-5999 --hide", valgrind, display);
+        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s --auto localhost:5900-5999 --hide",
+                 valgrind, display);
     else
-        snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide", display);
+        snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide",
+                 display);
 
     return execl("/bin/sh", "sh", "-c", buf, NULL);
 
@@ -51,18 +53,17 @@ static int exec_x11spice(x11spice_server_t *server, gchar *display)
 }
 
 
-static void * flush_output(void *opaque)
+static void *flush_output(void *opaque)
 {
     x11spice_server_t *server = (x11spice_server_t *) opaque;
     int rc;
     char buf[4096];
 
-    while (1)
-    {
+    while (1) {
         rc = read(server->pipe, buf, sizeof(buf));
         if (rc == -1 && errno == EINTR)
             continue;
-    
+
         if (rc <= 0)
             break;
 
@@ -80,10 +81,8 @@ static int get_a_line(char *buf, int len, x11spice_server_t *server)
     char *p;
 
     for (p = buf; p < buf + len; p++)
-        if (*p == '\n')
-        {
-            if (p - buf > 4 && memcmp(buf, "URI=", 4) == 0)
-            {
+        if (*p == '\n') {
+            if (p - buf > 4 && memcmp(buf, "URI=", 4) == 0) {
                 server->uri = g_memdup(buf + 4, p - buf - 4 + 1);
                 server->uri[p - buf - 4] = '\0';
                 return len;
@@ -108,16 +107,14 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
         return -1;
 
     server->pid = fork();
-    if (server->pid == 0)
-    {
+    if (server->pid == 0) {
         close(fd[0]);
         server->pipe = fd[1];
         exec_x11spice(server, test->xserver->display);
         g_warning("x11spice server exec failed.");
         return -1;
     }
-    else
-    {
+    else {
         server->pipe = fd[0];
         close(fd[1]);
 
@@ -125,30 +122,26 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
             return -1;
     }
 
-    server->logfd = open(test->logfile, O_CREAT | O_WRONLY, S_IRUSR |S_IWUSR | S_IRGRP | S_IROTH);
-    if (server->logfd <= 0)
-    {
+    server->logfd = open(test->logfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (server->logfd <= 0) {
         x11spice_stop(server);
         return -1;
     }
-   
+
     memset(buf, 0, sizeof(buf));
-    while (! server->uri)
-    {
+    while (!server->uri) {
         rc = read(server->pipe, buf + pos, sizeof(buf) - pos);
         if (rc == -1 && errno == EINTR)
             continue;
 
-        if (rc <= 0)
-        {
+        if (rc <= 0) {
             g_warning("x11spice server failed to send signal line.  rc %d, errno %d", rc, errno);
             return -1;
         }
 
         pos += rc;
 
-        while ((flush = get_a_line(buf, pos, server)))
-        {
+        while ((flush = get_a_line(buf, pos, server))) {
             write(server->logfd, buf, flush);
             if (flush < pos)
                 memmove(buf, buf + flush, pos - flush);
@@ -175,19 +168,16 @@ static void stop_valgrind_children(x11spice_server_t *server)
 void x11spice_stop(x11spice_server_t *server)
 {
     g_message("server stopping; pid %d", server->pid);
-    if (server->running)
-    {
+    if (server->running) {
         if (getenv("VALGRIND"))
             stop_valgrind_children(server);
 
-        if (still_alive(server->pid))
-        {
+        if (still_alive(server->pid)) {
             kill(server->pid, SIGTERM);
             usleep(50 * 1000);
         }
 
-        if (still_alive(server->pid))
-        {
+        if (still_alive(server->pid)) {
             sleep(1);
             kill(server->pid, SIGKILL);
         }
