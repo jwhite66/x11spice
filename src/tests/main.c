@@ -35,5 +35,7 @@ int main(int argc, char *argv[])
     g_test_add("/x11spice/basic", xdummy_t, "basic",
                 start_server, test_basic, stop_server);
 
+    g_log_set_always_fatal(G_LOG_LEVEL_ERROR);
+
     return g_test_run ();
 }
