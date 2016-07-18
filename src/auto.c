@@ -115,8 +115,6 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
     return 0;
 }
 
-// FIXME - localhost seems to end up working only as IPv6.
-//         that probably requires some complex thinking about v6
 static int try_port(const char *addr, int port)
 {
     static const int on = 1, off = 0;
@@ -159,6 +157,13 @@ static int try_port(const char *addr, int port)
             goto listen;
         }
         close(sock);
+
+        /*
+        **  Oddly, you seem to get situations where the ipv6 bind will fail,
+        **   with address in use; you can then try again and bind to the ipv4,
+        **   but you then go on to get other failures.
+        */
+        break;
     }
 
     freeaddrinfo(res);
