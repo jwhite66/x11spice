@@ -595,12 +595,22 @@ static void set_options(spice_t *s, options_t *options)
 static int try_auto(spice_t *s, options_t *options)
 {
     int fd;
-    fd = auto_listen(options->autouri);
+    int port;
+    char *addr = NULL;
+
+    fd = auto_listen(options->autouri, &addr, &port);
     if (fd < 0)
         return X11SPICE_ERR_AUTO_FAILED;
 
-    // FIXME - do we need to also set the port so subsequent sessions use the same port?
-    return spice_server_set_listen_socket_fd(s->server, fd);
+    close(fd);
+
+    if (addr) {
+        spice_server_set_addr(s->server, addr, 0);
+        free(addr);
+    }
+    spice_server_set_port(s->server, port);
+
+    return 0;
 }
 
 int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen)

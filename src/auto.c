@@ -179,7 +179,7 @@ listen:
     return sock;
 }
 
-int auto_listen_port_fd(const char *addr, int start, int end)
+int auto_listen_port_fd(const char *addr, int start, int end, int *port)
 {
     int i;
     int rc;
@@ -192,6 +192,7 @@ int auto_listen_port_fd(const char *addr, int start, int end)
     for (i = start; i <= end; i++) {
         rc = try_port(addr, i);
         if (rc >= 0) {
+            *port = i;
             printf("URI=%s:%d\n", addr ? addr : "", i);
             return rc;
         }
@@ -200,19 +201,16 @@ int auto_listen_port_fd(const char *addr, int start, int end)
     return -1;
 }
 
-int auto_listen(char *auto_spec)
+int auto_listen(char *auto_spec, char **addr, int *port)
 {
-    char *addr = NULL;
     int start;
     int end;
     int rc;
 
-    if (auto_parse(auto_spec, &addr, &start, &end))
+    if (auto_parse(auto_spec, addr, &start, &end))
         return -1;
 
-    rc = auto_listen_port_fd(addr, start, end);
-    if (addr)
-        free(addr);
+    rc = auto_listen_port_fd(*addr, start, end, port);
 
     fflush(stdout);
 
