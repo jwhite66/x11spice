@@ -29,6 +29,8 @@
 typedef struct {
     int pid;
     int pipe;
+    long desired_vram;
+    gchar *modes;
     gboolean running;
     gchar *xorg_fname;
     gchar *logfile;

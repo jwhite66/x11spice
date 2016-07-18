@@ -33,7 +33,7 @@
 
 #include "xdummy.h"
 
-static void write_xorg_conf(FILE * fp, xdummy_t *server, long vram)
+static void write_xorg_conf(FILE * fp, xdummy_t *server)
 {
 
     fprintf(fp,
@@ -60,6 +60,14 @@ static void write_xorg_conf(FILE * fp, xdummy_t *server, long vram)
             "  Driver \"void\"\n"
             "EndSection\n"
             "\n"
+            "Section \"Monitor\"\n"
+            "    Identifier     \"dummy_monitor\"\n"
+            "    VendorName     \"Unknown\"\n"
+            "    ModelName      \"Unknown\"\n"
+            "    HorizSync       30.0 - 130.0\n"
+            "    VertRefresh     50.0 - 250.0\n"
+            "    Option         \"DPMS\"\n"
+            "EndSection\n"
             "Section \"Device\"\n"
             "  Identifier \"dummy_videocard\"\n"
             "  Driver \"dummy\"\n"
@@ -71,6 +79,9 @@ static void write_xorg_conf(FILE * fp, xdummy_t *server, long vram)
             "  Device \"dummy_videocard\"\n"
             "  Monitor \"dummy_monitor\"\n"
             "  DefaultDepth 24\n"
+            "SubSection \"Display\"\n"
+            "  Modes %s\n"
+            "EndSubSection\n"
             "EndSection\n"
             "\n"
             "Section \"ServerLayout\"\n"
@@ -78,7 +89,7 @@ static void write_xorg_conf(FILE * fp, xdummy_t *server, long vram)
             "  Screen       \"dummy_screen\"\n"
             "  InputDevice  \"dummy_mouse\"\n"
             "  InputDevice  \"dummy_keyboard\"\n"
-            "EndSection\n", vram);
+            "EndSection\n", server->desired_vram, server->modes);
 }
 
 static int generate_paths(xdummy_t *server, gconstpointer user_data)
@@ -128,7 +139,7 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
     if (!fp)
         return -1;
 
-    write_xorg_conf(fp, server, 192000L);
+    write_xorg_conf(fp, server);
     fclose(fp);
 
     if (redirect(server->outfile))
@@ -155,6 +166,12 @@ int redirect(gchar *fname)
 }
 
 
+static void configure_xorg_parameters(xdummy_t *server, gconstpointer user_data)
+{
+    server->desired_vram = 24000;
+    server->modes = "\"1024x768\"";
+}
+
 void start_server(xdummy_t *server, gconstpointer user_data)
 {
     int fd[2];
@@ -164,6 +181,9 @@ void start_server(xdummy_t *server, gconstpointer user_data)
     char *p;
 
     server->running = FALSE;
+
+    configure_xorg_parameters(server, user_data);
+
     if (generate_paths(server, user_data))
         return;
 
