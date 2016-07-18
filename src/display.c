@@ -220,7 +220,7 @@ int display_open(display_t *d, session_t *session)
     d->session = session;
 
     d->c = xcb_connect(session->options.display, &scr);
-    if (!d->c) {
+    if (!d->c || xcb_connection_has_error(d->c)) {
         fprintf(stderr, "Error:  could not open display %s\n",
                 session->options.display ? session->options.display : "");
         return X11SPICE_ERR_NODISPLAY;
