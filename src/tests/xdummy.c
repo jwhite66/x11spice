@@ -21,6 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -67,6 +68,7 @@ static void write_xorg_conf(FILE * fp, xdummy_t *server)
             "    HorizSync       30.0 - 130.0\n"
             "    VertRefresh     50.0 - 250.0\n"
             "    Option         \"DPMS\"\n"
+            "    Option         \"ReducedBlanking\"\n"
             "EndSection\n"
             "Section \"Device\"\n"
             "  Identifier \"dummy_videocard\"\n"
@@ -168,8 +170,13 @@ int redirect(gchar *fname)
 
 static void configure_xorg_parameters(xdummy_t *server, gconstpointer user_data)
 {
-    server->desired_vram = 24000;
+    server->desired_vram = ((1024 * 768 * 4) + 1023)/ 1024;
     server->modes = "\"1024x768\"";
+
+    if (strcmp(user_data , "resize") == 0) {
+        server->desired_vram = ((1920 * 1080 * 4) + 1023) / 1024;
+        server->modes = "\"1920x1080\"";
+    }
 }
 
 void start_server(xdummy_t *server, gconstpointer user_data)

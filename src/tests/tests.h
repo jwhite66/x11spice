@@ -41,5 +41,6 @@ typedef struct
 **  Prototypes
 **--------------------------------------------------------------------------*/
 void test_basic(xdummy_t *server, gconstpointer user_data);
+void test_resize(xdummy_t *server, gconstpointer user_data);
 
 #endif

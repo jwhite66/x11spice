@@ -107,7 +107,40 @@ void test_basic(xdummy_t *xdummy, gconstpointer user_data)
         g_test_fail();
     }
     else
-        check_screenshot(&test, &server, xdummy, "expected.grid.1024.768.ppm");
+        check_screenshot(&test, &server, xdummy, "expected.grid.1024x768.ppm");
 
     test_common_stop(&test, &server);
 }
+
+void test_resize(xdummy_t *xdummy, gconstpointer user_data)
+{
+    test_t test;
+    x11spice_server_t server;
+    int rc;
+    char buf[4096];
+    int i;
+    static char *modes[] = { "640x480", "800x600", "1024x768", "1280x1024", "1920x1080" };
+
+    rc = test_common_start(&test, &server, xdummy, user_data);
+    if (rc)
+        return;
+
+    for (i = 0; i < sizeof(modes) / sizeof(modes[0]) && ! g_test_failed(); i++) {
+        snprintf(buf, sizeof(buf), "xrandr --display :%s -s %s", xdummy->display, modes[i]);
+        system(buf);
+
+        snprintf(buf, sizeof(buf), ":%s", xdummy->display);
+        if (xcb_draw_grid(buf)) {
+            g_warning("Could not draw the grid");
+            g_test_fail();
+            break;
+        }
+        else {
+            snprintf(buf, sizeof(buf), "expected.grid.%s.ppm", modes[i]);
+            check_screenshot(&test, &server, xdummy, buf);
+        }
+    }
+
+    test_common_stop(&test, &server);
+}
+
