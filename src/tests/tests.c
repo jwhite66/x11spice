@@ -18,6 +18,7 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <unistd.h>
 
 #include "xdummy.h"
 
@@ -71,6 +72,8 @@ static void check_screenshot(test_t *test, x11spice_server_t *spice_server, xdum
     screencap = g_test_build_filename(G_TEST_BUILT, "run", test->name, "screencap.ppm", NULL);
     if (strlen(spice_server->uri) >= 8 && memcmp(spice_server->uri, "spice://", 8) == 0)
         needs_prefix = 0;
+
+    unlink(screencap);
 
     snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
              needs_prefix ? "spice://" : "", spice_server->uri, screencap);
