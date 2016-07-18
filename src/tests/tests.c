@@ -61,47 +61,53 @@ static void test_common_stop(test_t * test, x11spice_server_t * server)
     x11spice_stop(server);
 }
 
-void test_basic(xdummy_t *xserver, gconstpointer user_data)
+static void check_screenshot(test_t *test, x11spice_server_t *spice_server, xdummy_t *xdummy,
+                             gchar *expected_result)
+{
+    int needs_prefix = 1;
+    gchar *screencap;
+    char buf[4096];
+
+    screencap = g_test_build_filename(G_TEST_BUILT, "run", test->name, "screencap.ppm", NULL);
+    if (strlen(spice_server->uri) >= 8 && memcmp(spice_server->uri, "spice://", 8) == 0)
+        needs_prefix = 0;
+
+    snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
+             needs_prefix ? "spice://" : "", spice_server->uri, screencap);
+    system(buf);
+
+    snprintf(buf, sizeof(buf), "md5sum %s | "
+             "sed -e 's!%s!%s!' |" "md5sum -c", expected_result, expected_result, screencap);
+    if (system(buf)) {
+        snprintf(buf, sizeof(buf), "xwd -display :%s -root -out %s.xwd",
+                 xdummy->display, screencap);
+        system(buf);
+
+        g_warning("%s does not match %s", expected_result, screencap);
+        g_warning("xwud -in %s.xwd should show you the current X screen.", screencap);
+        g_test_fail();
+    }
+    g_free(screencap);
+}
+
+void test_basic(xdummy_t *xdummy, gconstpointer user_data)
 {
     test_t test;
     x11spice_server_t server;
     int rc;
-    gchar *screencap;
     char buf[4096];
-    int needs_prefix;
 
-    rc = test_common_start(&test, &server, xserver, user_data);
+    rc = test_common_start(&test, &server, xdummy, user_data);
     if (rc)
         return;
 
-    snprintf(buf, sizeof(buf), ":%s", xserver->display);
+    snprintf(buf, sizeof(buf), ":%s", xdummy->display);
     if (xcb_draw_grid(buf)) {
         g_warning("Could not draw the grid");
         g_test_fail();
     }
-    else {
-
-        screencap = g_test_build_filename(G_TEST_BUILT, "run", test.name, "screencap.ppm", NULL);
-        needs_prefix = 1;
-        if (strlen(server.uri) >= 8 && memcmp(server.uri, "spice://", 8) == 0)
-            needs_prefix = 0;
-
-        snprintf(buf, sizeof(buf), "spicy-screenshot --uri=%s%s --out-file=%s",
-                 needs_prefix ? "spice://" : "", server.uri, screencap);
-        system(buf);
-
-        snprintf(buf, sizeof(buf), "md5sum basic.expected.ppm | "
-                 "sed -e 's!basic.expected.ppm!%s!' |" "md5sum -c", screencap);
-        if (system(buf)) {
-            snprintf(buf, sizeof(buf), "xwd -display :%s -root -out %s.xwd",
-                     xserver->display, screencap);
-            system(buf);
-
-            g_warning("%s does not match basic.expected.ppm", screencap);
-            g_warning("xwud -in %s.xwd should show you the current X screen.", screencap);
-            g_test_fail();
-        }
-    }
+    else
+        check_screenshot(&test, &server, xdummy, "expected.grid.1024.768.ppm");
 
     test_common_stop(&test, &server);
 }
