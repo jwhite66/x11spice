@@ -30,7 +30,6 @@ int main(int argc, char *argv[])
     setlocale(LC_ALL, "");
 
     g_test_init(&argc, &argv, NULL);
-    //  FIXME - g_test_bug_base ("http://bugzilla.gnome.org/show_bug.cgi?id=");
 
     g_test_add("/x11spice/basic", xdummy_t, "basic", start_server, test_basic, stop_server);
 
