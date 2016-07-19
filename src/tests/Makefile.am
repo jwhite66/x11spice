@@ -6,9 +6,13 @@ AM_LDFLAGS = $(ALL_XCB_LIBS) $(GTK2_LIBS) $(SPICE_LIBS) $(GLIB2_LIBS) $(PIXMAN_L
 
 x11spice_test_SOURCES = \
     tests.c \
+    tests.h \
     x11spice_test.c \
+    x11spice_test.h \
     xcb.c \
+    xcb.h \
     xdummy.c \
+    xdummy.h \
     main.c
 
 noinst_PROGRAMS = $(TESTS)

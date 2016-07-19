@@ -8,18 +8,28 @@ AM_CFLAGS = -Wall $(ALL_XCB_CFLAGS) $(GTK2_CFLAGS) $(SPICE_CFLAGS) $(SPICE_PROTO
 x11spice_LDADD = $(ALL_XCB_LIBS) $(GTK2_LIBS) $(SPICE_LIBS) $(GLIB2_LIBS) $(PIXMAN_LIBS) $(CODE_COVERAGE_LDFLAGS)
 x11spice_SOURCES = \
     agent.c \
-    listen.c \
+    agent.h \
     display.c \
+    display.h \
+    listen.c \
+    listen.h \
     gui.c \
+    gui.h \
     options.c \
+    options.h \
     scan.c \
+    scan.h \
     session.c \
+    session.h \
     spice.c \
+    local_spice.h \
+    x11spice.h \
     main.c
 
-man_MANS = x11spice.1
+dist_man_MANS = x11spice.1
 
 nobase_sysconf_DATA = xdg/x11spice/x11spice.conf
 
-SUBDIRS = tests
+EXTRA_DIST = xdg/x11spice/x11spice.conf
 
+SUBDIRS = tests
