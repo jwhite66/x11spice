@@ -13,7 +13,7 @@ dn=`dirname $0`
 ddir=`(cd $dn; pwd)`
 
 xorg_args="-ac -config $ddir/dummy.xorg.conf -logfile $ddir/dummy.log"
-args="--auto 5900-5910"
+args="5900-5910"
 
 function cleanup {
     rm -rf /tmp/xspice-vdagent
