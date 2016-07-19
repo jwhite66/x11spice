@@ -256,7 +256,11 @@ static void on_accept(int fd, int event, void *opaque)
     socklen_t length = sizeof(address);
     int flags;
 
-    // FIXME - not cool to accept more than one connection?
+    if (agent->virtio_client_fd != -1) {
+        fprintf(stderr, "Error: cannot accept multiple agent connection.\n");
+        close(fd);
+        return;
+    }
 
     agent->virtio_client_fd =
         accept(agent->virtio_listen_fd, (struct sockaddr *) &address, &length);
