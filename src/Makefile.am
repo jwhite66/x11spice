@@ -17,5 +17,9 @@ x11spice_SOURCES = \
     spice.c \
     main.c
 
+man_MANS = x11spice.1
+
+nobase_sysconf_DATA = xdg/x11spice/x11spice.conf
+
 SUBDIRS = tests
 

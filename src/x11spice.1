@@ -1,0 +1,83 @@
+.TH X11SPICE "1" "July 2016" "x11spice" "User Commands"
+.SH NAME
+x11spice \- Share an Xorg server via Spice
+.SH SYNOPSIS
+.B x11spice
+[\fIOPTION\fR]
+[\fI<listen-spec>\fR]
+.SH DESCRIPTION
+x11spice will allow a user to share an X11 session using libspice-server.
+.PP
+This provides a remote desktop access feature, using the Spice protocol.
+.PP
+If supplied, the first and only command line parameter will provide a
+specification for how the Spice server should listen for connections.
+.TP
+The <listen-spec> is of the form:
+  [[host]:[port][-end-port]
+.PP
+where host specifies the address to listen on (default: localhost),
+and port specifies the port to listen to (default: 5900).
+end-port, if given, will cause x11spice to scan from port to end-port
+checking for an open port, and using the first one available.
+.PP
+By default, x11spice will display a simple dialog box which will show
+connection status and provide a mechanism to disconnect a remote viewer
+or exit the program altogether.
+.SH OPTIONS
+.TP
+\fB\-\-viewonly\fR
+This will prevent a remote viewer from being able to inject mouse or keyboard
+commands.
+.TP
+\fB\-\-timeout\fR[=\fISECONDS\fR]
+If a timeout is specificed, if no connection is made within the given number of seconds,
+x11spice will exit.
+.TP
+\fB\-\-display\fR=\fIDISPLAY\fR
+DISPLAY will use an alternate Xorg server.  The string should be in the standard
+format used by X for the DISPLAY environment variable; e.g. :1.
+.TP
+\fB\-\-generate-password\fR[=\fILEN\fR]
+When this option is selected, x11spice will generate a password randomly
+and use that for the connection; the password will be printed to the standard
+output for use.  If the optional LEN is given, the password will have that length.
+.TP
+\fB\-\-password-file\fR={\fI-\fR|\fIPASSWORD\fR}
+If specified, x11spice will read the password from the given file, or stdin in the
+case of a file named \fI-\fR.
+.TP
+\fB\-\-password\fR=\fIPASSWORD\fR
+If given, x11spice will directly use PASSWORD as an option.  \fBNote: this is not recommended.\fR
+This will expose the password in the process list, which is a security concern.
+.TP
+\fB\-\-hide\fR
+This will prevent the x11spice user interface from appearing at all.
+.TP
+\fB\-\-minimize\fR
+If given, the x11spice user interface will start minimized.
+
+.SH EXIT STATUS
+x11spice will return a status of 0 if it is able to start a Spice session.
+It will return non zero in the event of an error.
+.SH EXAMPLE 
+
+x11spice --generate-password
+
+
+.SH COPYRIGHT
+Copyright (C) 2016  Jeremy White <jwhite@codeweavers.com>.
+All rights reserved.
+
+x11spice is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+x11spice is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with x11spice.  If not, see <http://www.gnu.org/licenses/>.

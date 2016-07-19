@@ -253,14 +253,14 @@ void options_from_config(options_t *options)
     GKeyFile *userkey = g_key_file_new();
     GKeyFile *systemkey = g_key_file_new();
 
-    options->user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice", NULL);
+    options->user_config_file = g_build_filename(g_get_user_config_dir(), "x11spice/x11spice.conf", NULL);
 
     if (!g_key_file_load_from_file(userkey, options->user_config_file, G_KEY_FILE_NONE, NULL)) {
         g_key_file_free(userkey);
         userkey = NULL;
     }
 
-    if (!g_key_file_load_from_dirs(systemkey, "x11spice",
+    if (!g_key_file_load_from_dirs(systemkey, "x11spice/x11spice.conf",
                                    (const char **) g_get_system_config_dirs(),
                                    &options->system_config_file, G_KEY_FILE_NONE, NULL)) {
         g_key_file_free(systemkey);
@@ -268,10 +268,10 @@ void options_from_config(options_t *options)
     }
 
     options->timeout = int_option(userkey, systemkey, "spice", "timeout");
-    options->minimize = int_option(userkey, systemkey, "spice", "minimize");
-    options->viewonly = int_option(userkey, systemkey, "spice", "viewonly");
+    options->minimize = bool_option(userkey, systemkey, "spice", "minimize");
+    options->viewonly = bool_option(userkey, systemkey, "spice", "viewonly");
     options->generate_password = int_option(userkey, systemkey, "spice", "generate-password");
-    options->hide = int_option(userkey, systemkey, "spice", "hide");
+    options->hide = bool_option(userkey, systemkey, "spice", "hide");
     options->display = string_option(userkey, systemkey, "spice", "display");
 
     options->listen = string_option(userkey, systemkey, "spice", "listen");
