@@ -37,11 +37,9 @@ typedef struct {
     int generate_password;
     int hide;
     char *display;
-    char *autouri;
+    char *listen;
 
     /* config only */
-    char *spice_addr;
-    int spice_port;
     char *spice_password;
     char *password_file;
     int disable_ticketing;

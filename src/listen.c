@@ -19,10 +19,9 @@
 */
 
 /*----------------------------------------------------------------------------
-**  auto.c
-**      This file provides functions to implement the '--auto' option
-**  for x11spice.  This mostly involves trying to find an open port we can use
-**  for our Xserver
+**  listen.c
+**      This file provides functions to listen for the address given.
+**  This mostly involves trying to find an open port we can use for our server
 **--------------------------------------------------------------------------*/
 
 #include <stdlib.h>
@@ -40,12 +39,12 @@
 #include <arpa/inet.h>
 #include <errno.h>
 
-#include "auto.h"
+#include "listen.h"
 #include "x11spice.h"
 
 #define SPICE_URI_PREFIX    "spice://"
 
-int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_end)
+int listen_parse(const char *listen_spec, char **addr, int *port_start, int *port_end)
 {
     int leading = 0;
     int trailing = 0;
@@ -57,13 +56,13 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
     *addr = NULL;
 
     /* Allow form of spice:// */
-    if (strlen(auto_spec) > strlen(SPICE_URI_PREFIX))
-        if (memcmp(auto_spec, SPICE_URI_PREFIX, strlen(SPICE_URI_PREFIX)) == 0)
-            auto_spec += strlen(SPICE_URI_PREFIX);
+    if (strlen(listen_spec) > strlen(SPICE_URI_PREFIX))
+        if (memcmp(listen_spec, SPICE_URI_PREFIX, strlen(SPICE_URI_PREFIX)) == 0)
+            listen_spec += strlen(SPICE_URI_PREFIX);
 
-    p = auto_spec + strlen(auto_spec) - 1;
+    p = listen_spec + strlen(listen_spec) - 1;
     /* Look for a form of NNNN-NNNN at the end of the line */
-    for (; p >= auto_spec && *p; p--) {
+    for (; p >= listen_spec && *p; p--) {
         /* Skip trailing white space */
         if (isspace(*p) && !hyphen && !trailing)
             continue;
@@ -100,16 +99,16 @@ int auto_parse(const char *auto_spec, char **addr, int *port_start, int *port_en
     /* If we got a port range, make sure we had either no address provided,
        or a clear addr:NNNN-NNNN specficiation */
     if (leading || trailing)
-        if (p > auto_spec && *p != ':')
+        if (p > listen_spec && *p != ':')
             return X11SPICE_ERR_PARSE;
 
-    if (p > auto_spec && *p == ':')
+    if (p > listen_spec && *p == ':')
         p--;
 
-    len = p - auto_spec + 1;
+    len = p - listen_spec + 1;
     if (len > 0) {
         *addr = calloc(1, len + 1);
-        memcpy(*addr, auto_spec, len);
+        memcpy(*addr, listen_spec, len);
     }
 
     return 0;
@@ -179,7 +178,7 @@ listen:
     return sock;
 }
 
-int auto_listen_port_fd(const char *addr, int start, int end, int *port)
+int listen_find_open_port(const char *addr, int start, int end, int *port)
 {
     int i;
     int rc;
@@ -199,20 +198,4 @@ int auto_listen_port_fd(const char *addr, int start, int end, int *port)
     }
 
     return -1;
-}
-
-int auto_listen(char *auto_spec, char **addr, int *port)
-{
-    int start;
-    int end;
-    int rc;
-
-    if (auto_parse(auto_spec, addr, &start, &end))
-        return -1;
-
-    rc = auto_listen_port_fd(*addr, start, end, port);
-
-    fflush(stdout);
-
-    return rc;
 }

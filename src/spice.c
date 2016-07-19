@@ -36,7 +36,7 @@
 #include "x11spice.h"
 #include "display.h"
 #include "session.h"
-#include "auto.h"
+#include "listen.h"
 
 struct SpiceTimer {
     SpiceTimerFunc func;
@@ -579,12 +579,6 @@ static void set_options(spice_t *s, options_t *options)
     if (options->disable_ticketing)
         spice_server_set_noauth(s->server);
 
-    if (!options->autouri) {
-        spice_server_set_addr(s->server, options->spice_addr ? options->spice_addr : "", 0);
-        if (options->spice_port)
-            spice_server_set_port(s->server, options->spice_port);
-    }
-
     if (options->spice_password)
         spice_server_set_ticket(s->server, options->spice_password, 0, 0, 0);
 
@@ -592,17 +586,31 @@ static void set_options(spice_t *s, options_t *options)
 
 }
 
-static int try_auto(spice_t *s, options_t *options)
+static int try_listen(spice_t *s, options_t *options)
 {
     int fd;
     int port;
     char *addr = NULL;
+    int start;
+    int end;
+    int rc;
 
-    fd = auto_listen(options->autouri, &addr, &port);
-    if (fd < 0)
-        return X11SPICE_ERR_AUTO_FAILED;
 
-    close(fd);
+    rc = listen_parse(options->listen, &addr, &start, &end);
+    if (rc)
+        return rc;
+
+    fd  = listen_find_open_port(addr, start, end, &port);
+    fflush(stdout);
+
+    if (fd >= 0)
+        close(fd);
+    else {
+        if (start != -1)
+            return X11SPICE_ERR_AUTO_FAILED;
+        else
+            return X11SPICE_ERR_LISTEN;
+    }
 
     if (addr) {
         spice_server_set_addr(s->server, addr, 0);
@@ -627,10 +635,13 @@ int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen)
 
     set_options(s, options);
 
-    if (options->autouri) {
-        int rc = try_auto(s, options);
-        if (rc)
-            return rc;
+    rc = try_listen(s, options);
+    if (rc) {
+        if (rc == X11SPICE_ERR_AUTO_FAILED)
+            fprintf(stderr, "Error: unable to open any port in range '%s'.\n", options->listen);
+        else
+            fprintf(stderr, "Error: unable to listen on '%s'.\n", options->listen);
+        return rc;
     }
 
     if (spice_server_init(s->server, s->core) < 0) {

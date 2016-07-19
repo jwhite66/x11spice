@@ -18,13 +18,14 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef AUTO_H_
-#define AUTO_H_
+#ifndef LISTEN_H_
+#define LISTEN_H_
 
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int auto_listen(char *auto_spec, char **addr, int *port);
+int listen_parse(const char *listen_spec, char **addr, int *port_start, int *port_end);
+int listen_find_open_port(const char *addr, int start, int end, int *port);
 
 #endif

@@ -53,9 +53,6 @@ void options_free(options_t *options)
         options->display = NULL;
     }
 
-    g_free(options->spice_addr);
-    options->spice_addr = NULL;
-
     g_free(options->spice_password);
     options->spice_password = NULL;
 
@@ -64,9 +61,9 @@ void options_free(options_t *options)
     g_free(options->uinput_path);
     options->uinput_path = NULL;
 
-    if (options->autouri)
-        free(options->autouri);
-    options->autouri = NULL;
+    if (options->listen)
+        free(options->listen);
+    options->listen = NULL;
 
     g_free(options->user_config_file);
     options->user_config_file = NULL;
@@ -123,14 +120,29 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
 
 static void usage(options_t *options, char *argv0)
 {
-    int len = strlen(argv0);
-    printf("%s: [--viewonly ] [--timeout=seconds] [--display=DISPLAY]\n", argv0);
-    printf("%*.*s  [--password=<password>] [--password-file={-|<password-file>}]\n", len, len, "");
-    printf("%*.*s  [--auto=<listen-spec>] [--generate-password[=len]]\n", len, len, "");
-    printf("%*.*s  [--hide] [--minimize]\n", len, len, "");
-    printf("Command line parameters override settings in %s\n", options->user_config_file);
-    printf("which overrides settings in %s\n",
-            options->system_config_file ? options->system_config_file : "the system config file");
+    char indent[256];
+
+    snprintf(indent, sizeof(indent), "%*.*s ", (int) strlen(argv0), (int) strlen(argv0), "");
+    printf("%s: [OPTIONS] [<listen-specification>]\n", argv0);
+    printf("\n");
+    printf("Starts a Spice server and connects it to an X11 display.\n");
+    printf("\n");
+    printf("The <listen-specification> is of the form:\n");
+    printf("  [[host]:[port][-end-port]\n");
+    printf("where host specifies the address to listen on.  Defaults to localhost\n");
+    printf("      port specifies the port to listen to.  Defaults to 5900.\n");
+    printf("      end-port, if given, will cause x11spice to scan from port to end-port\n");
+    printf("      checking for an open port, and using the first one available.\n");
+    printf("\n");
+    printf("Options:\n");
+    printf("%s [--viewonly]\n", indent);
+    printf("%s [--timeout=<seconds>]\n", indent);
+    printf("%s [--display=<DISPLAY>]\n", indent);
+    printf("%s [--generate-password[=<len>]\n", indent);
+    printf("%s [--password=<password>]\n", indent);
+    printf("%s [--password-file={-|<password-file}]\n", indent);
+    printf("%s [--hide]\n", indent);
+    printf("%s [--minimize]\n", indent);
 }
 
 int options_parse_arguments(int argc, char *argv[], options_t *options)
@@ -173,10 +185,6 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
             case OPTION_TIMEOUT:
                 options->timeout = atol(optarg);
-                break;
-
-            case OPTION_AUTO:
-                options->autouri = strdup(optarg);
                 break;
 
             case OPTION_HIDE:
@@ -224,6 +232,19 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
         }
     }
 
+    /* Grab the listen spec, if given */
+    if (rc == 0) {
+        if (optind >= argc) {
+            /* Default */
+            options->listen = strdup("5900");
+        } else if (optind < (argc - 1)) {
+            fprintf(stderr, "Error: too many arguments\n");
+            rc = X11SPICE_ERR_BADARGS;
+        } else {
+            options->listen = strdup(argv[optind]);
+        }
+    }
+
     return rc;
 }
 
@@ -252,12 +273,10 @@ void options_from_config(options_t *options)
     options->generate_password = int_option(userkey, systemkey, "spice", "generate-password");
     options->hide = int_option(userkey, systemkey, "spice", "hide");
     options->display = string_option(userkey, systemkey, "spice", "display");
-    options->autouri = string_option(userkey, systemkey, "spice", "auto");
 
-    options->spice_addr = string_option(userkey, systemkey, "spice", "addr");
+    options->listen = string_option(userkey, systemkey, "spice", "listen");
     options->spice_password = string_option(userkey, systemkey, "spice", "password");
     options->password_file = string_option(userkey, systemkey, "spice", "password-file");
-    options->spice_port = int_option(userkey, systemkey, "spice", "port");
     options->disable_ticketing = bool_option(userkey, systemkey, "spice", "disable-ticketing");
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit-on-disconnect");
     options->virtio_path = string_option(userkey, systemkey, "spice", "virtio-path");
@@ -268,8 +287,8 @@ void options_from_config(options_t *options)
     if (userkey)
         g_key_file_free(userkey);
 
-    g_debug("options addr '%s', disable_ticketing %d, port %d", options->spice_addr,
-            options->disable_ticketing, options->spice_port);
+    g_debug("options listen '%s', disable_ticketing %d", options->listen,
+            options->disable_ticketing);
 }
 
 static int process_password_file(options_t *options)

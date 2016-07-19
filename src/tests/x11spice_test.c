@@ -41,10 +41,10 @@ static int exec_x11spice(x11spice_server_t *server, gchar *display)
     dup2(server->pipe, fileno(stderr));
 
     if (valgrind)
-        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s --auto localhost:5900-5999 --hide",
+        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s localhost:5900-5999 --hide",
                  valgrind, display);
     else
-        snprintf(buf, sizeof(buf), "../x11spice --display :%s --auto localhost:5900-5999 --hide",
+        snprintf(buf, sizeof(buf), "../x11spice --display :%s localhost:5900-5999 --hide",
                  display);
 
     return execl("/bin/sh", "sh", "-c", buf, NULL);
