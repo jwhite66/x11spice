@@ -65,8 +65,14 @@ void free_draw_queue_item(gpointer data)
 void *session_pop_draw(session_t *session)
 {
     void *ret = NULL;
-    if (!session || !session->running)
+
+    if (!session)
         return ret;
+
+    if (!session->running) {
+        session->draw_command_in_progress = FALSE;
+        return ret;
+    }
 
     if (!g_mutex_trylock(&session->lock))
         return ret;
@@ -82,8 +88,13 @@ int session_draw_waiting(session_t *session)
 {
     int ret = 0;
 
-    if (!session || !session->running)
-        return 0;
+    if (!session)
+        return ret;
+
+    if (!session->running) {
+        session->draw_command_in_progress = FALSE;
+        return ret;
+    }
 
     if (!g_mutex_trylock(&session->lock))
         return ret;
