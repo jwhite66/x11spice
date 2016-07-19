@@ -81,13 +81,6 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
     drawable->bbox.right = x + shmi->w;
     drawable->bbox.bottom = y + shmi->h;
 
-    /*
-     * surfaces_dest[i] should apparently be filled out with the
-     * surfaces that we depend on, and surface_rects should be
-     * filled with the rectangles of those surfaces that we
-     * are going to use.
-     *  FIXME - explore this instead of blindly copying...
-     */
     for (i = 0; i < 3; ++i)
         drawable->surfaces_dest[i] = -1;
 
@@ -106,7 +99,6 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
     qxl_image->descriptor.width = shmi->w;
     qxl_image->descriptor.height = shmi->h;
 
-    // FIXME - be a bit more dynamic...
     qxl_image->bitmap.format = SPICE_BITMAP_FMT_RGBA;
     qxl_image->bitmap.flags = SPICE_BITMAP_FLAGS_TOP_DOWN | QXL_BITMAP_DIRECT;
     qxl_image->bitmap.x = shmi->w;
@@ -173,7 +165,11 @@ static void handle_scan_report(session_t *session, scan_report_t *r)
         if (drawable) {
             g_async_queue_push(session->draw_queue, drawable);
             spice_qxl_wakeup(&session->spice.display_sin);
-            // FIXME - Note that shmi is not cleaned up at this point
+            /*
+            **  NOTE: the shmi is intentionally not freed at this point.
+            **        The call path will take care of that once it's been
+            **        pushed to Spice.
+            */
             return;
         }
         else
