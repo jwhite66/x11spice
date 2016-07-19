@@ -126,7 +126,7 @@ static int generate_paths(xdummy_t *server, gconstpointer user_data)
         return -1;
 
     server->spicefile = g_test_build_filename(G_TEST_BUILT, "run", user_data, "spice.log", NULL);
-    if (!server->outfile)
+    if (!server->spicefile)
         return -1;
 
     return 0;
@@ -157,9 +157,11 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
 int redirect(gchar *fname)
 {
     int fd;
-    fd = open(fname, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (fd <= 0)
+    fd = open(fname, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (fd < 0) {
+        perror(fname);
         return -1;
+    }
 
     dup2(fd, fileno(stdout));
     dup2(fd, fileno(stderr));
