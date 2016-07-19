@@ -592,24 +592,21 @@ static int try_listen(spice_t *s, options_t *options)
     int port;
     char *addr = NULL;
     int start;
-    int end;
     int rc;
 
 
-    rc = listen_parse(options->listen, &addr, &start, &end);
+    rc = listen_parse(options->listen, &addr, &start, &port);
     if (rc)
         return rc;
 
-    fd  = listen_find_open_port(addr, start, end, &port);
-    fflush(stdout);
+    if (start != -1) {
+        fd  = listen_find_open_port(addr, start, port, &port);
+        fflush(stdout);
 
-    if (fd >= 0)
-        close(fd);
-    else {
-        if (start != -1)
-            return X11SPICE_ERR_AUTO_FAILED;
+        if (fd >= 0)
+            close(fd);
         else
-            return X11SPICE_ERR_LISTEN;
+            return X11SPICE_ERR_AUTO_FAILED;
     }
 
     if (addr) {
@@ -640,7 +637,7 @@ int spice_start(spice_t *s, options_t *options, shm_image_t *fullscreen)
         if (rc == X11SPICE_ERR_AUTO_FAILED)
             fprintf(stderr, "Error: unable to open any port in range '%s'.\n", options->listen);
         else
-            fprintf(stderr, "Error: unable to listen on '%s'.\n", options->listen);
+            fprintf(stderr, "Error: invalid listen specification '%s'.\n", options->listen);
         return rc;
     }
 
