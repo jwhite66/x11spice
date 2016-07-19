@@ -92,6 +92,9 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
         return;
     }
 
+    if (!ir)
+        return;
+
     imglen = xcb_xfixes_get_cursor_image_cursor_image_length(ir);
     imgdata = xcb_xfixes_get_cursor_image_cursor_image(ir);
 
