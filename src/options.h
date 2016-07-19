@@ -57,6 +57,7 @@ typedef struct {
 **  Prototypes
 **--------------------------------------------------------------------------*/
 void options_init(options_t *options);
+void options_handle_user_config(int argc, char *argv[], options_t *options);
 int options_parse_arguments(int argc, char *argv[], options_t *options);
 int options_process_io(options_t *options);
 void options_free(options_t *options);

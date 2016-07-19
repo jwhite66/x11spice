@@ -38,6 +38,7 @@ typedef struct {
     pthread_t flush_thread;
     gboolean running;
     gchar *uri;
+    const gchar *conffile;
 } x11spice_server_t;
 
 /*----------------------------------------------------------------------------

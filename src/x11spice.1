@@ -26,13 +26,11 @@ connection status and provide a mechanism to disconnect a remote viewer
 or exit the program altogether.
 .SH OPTIONS
 .TP
-\fB\-\-viewonly\fR
-This will prevent a remote viewer from being able to inject mouse or keyboard
-commands.
-.TP
-\fB\-\-timeout\fR[=\fISECONDS\fR]
-If a timeout is specificed, if no connection is made within the given number of seconds,
-x11spice will exit.
+\fB\-\-config\fR[=\fIFILENAME\fR]
+This will read configuration settings from FILENAME, ignoring all settings
+in normal XDG locations.  If not provided, x11spice will first read settings
+from /etc/xdg/x11spice/x11spice.conf, then overwrite them with any settings read
+from ~/.config/x11spice/x11spice.conf. 
 .TP
 \fB\-\-display\fR=\fIDISPLAY\fR
 DISPLAY will use an alternate Xorg server.  The string should be in the standard
@@ -43,19 +41,27 @@ When this option is selected, x11spice will generate a password randomly
 and use that for the connection; the password will be printed to the standard
 output for use.  If the optional LEN is given, the password will have that length.
 .TP
-\fB\-\-password-file\fR={\fI-\fR|\fIPASSWORD\fR}
-If specified, x11spice will read the password from the given file, or stdin in the
-case of a file named \fI-\fR.
-.TP
-\fB\-\-password\fR=\fIPASSWORD\fR
-If given, x11spice will directly use PASSWORD as an option.  \fBNote: this is not recommended.\fR
-This will expose the password in the process list, which is a security concern.
-.TP
 \fB\-\-hide\fR
 This will prevent the x11spice user interface from appearing at all.
 .TP
 \fB\-\-minimize\fR
 If given, the x11spice user interface will start minimized.
+.TP
+\fB\-\-password\fR=\fIPASSWORD\fR
+If given, x11spice will directly use PASSWORD as an option.  \fBNote: this is not recommended.\fR
+This will expose the password in the process list, which is a security concern.
+.TP
+\fB\-\-password-file\fR={\fI-\fR|\fIPASSWORD\fR}
+If specified, x11spice will read the password from the given file, or stdin in the
+case of a file named \fI-\fR.
+.TP
+\fB\-\-timeout\fR[=\fISECONDS\fR]
+If a timeout is specificed, if no connection is made within the given number of seconds,
+x11spice will exit.
+.TP
+\fB\-\-viewonly\fR
+This will prevent a remote viewer from being able to inject mouse or keyboard
+commands.
 
 .SH EXIT STATUS
 x11spice will return a status of 0 if it is able to start a Spice session.

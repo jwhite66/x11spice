@@ -41,11 +41,11 @@ static int exec_x11spice(x11spice_server_t *server, gchar *display)
     dup2(server->pipe, fileno(stderr));
 
     if (valgrind)
-        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s localhost:5900-5999 --hide",
-                 valgrind, display);
+        snprintf(buf, sizeof(buf), "%s ../x11spice --display :%s localhost:5900-5999 --hide --config %s",
+                 valgrind, display, server->conffile);
     else
-        snprintf(buf, sizeof(buf), "../x11spice --display :%s localhost:5900-5999 --hide",
-                 display);
+        snprintf(buf, sizeof(buf), "../x11spice --display :%s localhost:5900-5999 --hide --config %s",
+                 display, server->conffile);
 
     return execl("/bin/sh", "sh", "-c", buf, NULL);
 
@@ -100,8 +100,24 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
     int rc;
     int pos = 0;
     int flush;
+    FILE *fp;
 
     server->running = FALSE;
+
+    server->conffile = g_test_build_filename(G_TEST_BUILT, "run", test->name, "x11spice.conf", NULL);
+    if (!server->conffile) {
+        g_warning("Failed to create conffile");
+        g_test_fail();
+        return -1;
+    }
+
+    fp = fopen(server->conffile, "w");
+    if (fp) {
+        char *config_data = "[spice]\n"
+                            "disable-ticketing=true\n";
+        fwrite(config_data, 1, strlen(config_data), fp);
+        fclose(fp);
+    }
 
     if (socketpair(PF_LOCAL, SOCK_STREAM, 0, fd))
         return -1;
@@ -122,7 +138,8 @@ int x11spice_start(x11spice_server_t *server, test_t *test)
             return -1;
     }
 
-    server->logfd = open(test->logfile, O_CREAT | O_WRONLY, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    server->logfd = open(test->logfile, O_CREAT | O_WRONLY | O_TRUNC,
+                         S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
     if (server->logfd <= 0) {
         x11spice_stop(server);
         return -1;

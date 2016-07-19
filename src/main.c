@@ -65,6 +65,7 @@ int main(int argc, char *argv[])
     **  Parse arguments
     **----------------------------------------------------------------------*/
     options_init(&session.options);
+    options_handle_user_config(argc, argv, &session.options);
     options_from_config(&session.options);
     rc = options_parse_arguments(argc, argv, &session.options);
     if (rc)
