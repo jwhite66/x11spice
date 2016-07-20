@@ -29,6 +29,7 @@
 
 #include "xdummy.h"
 #include "x11spice_test.h"
+#include "util.h"
 
 
 static int exec_x11spice(x11spice_server_t *server, gchar *display)
