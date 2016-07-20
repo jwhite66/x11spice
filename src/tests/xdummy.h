@@ -44,7 +44,5 @@ typedef struct {
 **--------------------------------------------------------------------------*/
 void start_server(xdummy_t *server, gconstpointer user_data);
 void stop_server(xdummy_t *server, gconstpointer user_data);
-int still_alive(int pid);
-int redirect(gchar *fname);
 
 #endif

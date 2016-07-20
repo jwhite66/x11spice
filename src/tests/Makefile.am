@@ -13,6 +13,8 @@ x11spice_test_SOURCES = \
     xcb.h \
     xdummy.c \
     xdummy.h \
+    util.c \
+    util.h \
     main.c
 
 noinst_PROGRAMS = $(TESTS)

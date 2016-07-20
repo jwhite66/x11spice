@@ -1,0 +1,35 @@
+#!/bin/bash
+# x11spice test script
+#   This will receive 4 arguments:
+#       $1 - Test X display, with a spice server attached
+#       $2 - Client X display, upon which we can run spicy
+#       $3 - Spice URI to connect to the spice server on $1
+#       $4 - Directory we can use for logs and scratch info
+# Note that it's also important that this script monitor itself;
+#  there is no external timeout mechanism
+echo Running basic x11perf to see how we perform
+spicy --display $2 --uri=$3 &
+spid=$!
+x11perf -display $1 -time 1 -repeat 1 -rect1 -eschertiletrap100 -create -pointer -gc -map -wvseg500 &
+perfpid=$!
+let x=0
+while [ $x -lt 60 ] ; do
+    xwd -display $1 -root -out "$4/display.$1.$x.xwd"
+    xwd -display $2 -root -out "$4/display.$2.$x.xwd"
+    sleep 1
+    ps -p $perfpid >/dev/null 2>&1 || break
+    x=$((x+1))
+done
+
+ps -p $spid >/dev/null 2>&1
+if [ $? -ne 0 ] ; then
+    echo Spice client not running.  That is an error.
+    exit 1
+else
+    kill $spid
+fi
+
+wait $perfpid
+rc=$?
+
+exit $rc

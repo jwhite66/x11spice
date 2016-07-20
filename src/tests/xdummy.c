@@ -33,6 +33,7 @@
 
 
 #include "xdummy.h"
+#include "util.h"
 
 static void write_xorg_conf(FILE * fp, xdummy_t *server)
 {
@@ -154,22 +155,6 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
                   "-logfile", server->logfile, "-displayfd", fdbuf, NULL);
 }
 
-int redirect(gchar *fname)
-{
-    int fd;
-    fd = open(fname, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-    if (fd < 0) {
-        perror(fname);
-        return -1;
-    }
-
-    dup2(fd, fileno(stdout));
-    dup2(fd, fileno(stderr));
-
-    return 0;
-}
-
-
 static void configure_xorg_parameters(xdummy_t *server, gconstpointer user_data)
 {
     server->desired_vram = ((1024 * 768 * 4) + 1023)/ 1024;
@@ -178,6 +163,11 @@ static void configure_xorg_parameters(xdummy_t *server, gconstpointer user_data)
     if (strcmp(user_data , "resize") == 0) {
         server->desired_vram = ((1920 * 1080 * 4) + 1023) / 1024;
         server->modes = "\"1920x1080\"";
+    }
+
+    if (strlen(user_data) > 7 && memcmp(user_data, "client_", 7) == 0) {
+        server->desired_vram = ((1280 * 1024 * 4) + 1023) / 1024;
+        server->modes = "\"1280x1024\"";
     }
 }
 
@@ -243,11 +233,6 @@ void start_server(xdummy_t *server, gconstpointer user_data)
 
     server->running = TRUE;
     g_message("server started; display %s", server->display);
-}
-
-int still_alive(int pid)
-{
-    return !waitpid(pid, NULL, WNOHANG);
 }
 
 void stop_server(xdummy_t *server, gconstpointer user_data)

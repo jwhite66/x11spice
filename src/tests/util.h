@@ -18,26 +18,14 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#ifndef UTIL_H_
+#define UTIL_H_
 
-#include <stdio.h>
-#include <locale.h>
+/*----------------------------------------------------------------------------
+**  Prototypes
+**--------------------------------------------------------------------------*/
+int still_alive(int pid);
+int redirect(gchar *fname);
+int spawn_command(char *cmd, char *output_file, int *pid);
 
-#include "xdummy.h"
-#include "tests.h"
-
-int main(int argc, char *argv[])
-{
-    setlocale(LC_ALL, "");
-
-    g_test_init(&argc, &argv, NULL);
-
-    g_test_add("/x11spice/basic", xdummy_t, "basic", start_server, test_basic, stop_server);
-
-    g_test_add("/x11spice/resize", xdummy_t, "resize", start_server, test_resize, stop_server);
-
-    g_test_add("/x11spice/x11perf1", xdummy_t, "x11perf1", start_server, test_script, stop_server);
-
-    g_log_set_always_fatal(G_LOG_LEVEL_ERROR);
-
-    return g_test_run();
-}
+#endif

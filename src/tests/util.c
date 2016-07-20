@@ -18,26 +18,49 @@
     along with x11spice.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-
 #include <stdio.h>
-#include <locale.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#include "xdummy.h"
-#include "tests.h"
+#include <glib.h>
 
-int main(int argc, char *argv[])
+int redirect(char *fname)
 {
-    setlocale(LC_ALL, "");
+    int fd;
+    fd = open(fname, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    if (fd < 0) {
+        perror(fname);
+        return -1;
+    }
 
-    g_test_init(&argc, &argv, NULL);
+    dup2(fd, fileno(stdout));
+    dup2(fd, fileno(stderr));
 
-    g_test_add("/x11spice/basic", xdummy_t, "basic", start_server, test_basic, stop_server);
-
-    g_test_add("/x11spice/resize", xdummy_t, "resize", start_server, test_resize, stop_server);
-
-    g_test_add("/x11spice/x11perf1", xdummy_t, "x11perf1", start_server, test_script, stop_server);
-
-    g_log_set_always_fatal(G_LOG_LEVEL_ERROR);
-
-    return g_test_run();
+    return 0;
 }
+
+
+int still_alive(int pid)
+{
+    return !waitpid(pid, NULL, WNOHANG);
+}
+
+int spawn_command(char *cmd, char *output_file, int *pid)
+{
+    *pid = fork();
+    if (*pid == 0) {
+        if (redirect(output_file))
+            return -1;
+
+        execl("/bin/sh", "sh", "-c", cmd, NULL);
+        g_error("exec of [%s] failed",cmd);
+    }
+
+    return 0;
+}
+
+
+

@@ -19,10 +19,14 @@
 */
 
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <libgen.h>
 
 #include "xdummy.h"
 
 #include "tests.h"
+#include "util.h"
 #include "xcb.h"
 #include "x11spice_test.h"
 
@@ -62,12 +66,16 @@ static void test_common_stop(test_t * test, x11spice_server_t * server)
     x11spice_stop(server);
 }
 
-static int check_binary(char *exe)
+static int check_binary(char *exe, char *display)
 {
     int rc;
     char *p = malloc(strlen(exe) + 64);
 
-    sprintf(p, "%s --version >/dev/null 2>&1", exe);
+    if (display)
+        sprintf(p, "%s --display :%s --version >/dev/null 2>&1", exe, display);
+    else
+        sprintf(p, "%s --version >/dev/null 2>&1", exe);
+
     rc = system(p);
 
     if (rc) {
@@ -118,7 +126,7 @@ void test_basic(xdummy_t *xdummy, gconstpointer user_data)
     int rc;
     char buf[4096];
 
-    if (check_binary("spicy-screenshot"))
+    if (check_binary("spicy-screenshot", NULL))
         return;
 
     rc = test_common_start(&test, &server, xdummy, user_data);
@@ -145,7 +153,7 @@ void test_resize(xdummy_t *xdummy, gconstpointer user_data)
     int i;
     static char *modes[] = { "640x480", "800x600", "1024x768", "1280x1024", "1920x1080" };
 
-    if (check_binary("xrandr") || check_binary("spicy-screenshot"))
+    if (check_binary("xrandr", xdummy->display) || check_binary("spicy-screenshot", NULL))
         return;
 
     rc = test_common_start(&test, &server, xdummy, user_data);
@@ -171,3 +179,73 @@ void test_resize(xdummy_t *xdummy, gconstpointer user_data)
     test_common_stop(&test, &server);
 }
 
+/*
+**  The 'script' type test is a special case.
+**  It is set up to allow us to run any shell script we like.
+**  It will start a dummy X server, attach a spice server to it.
+**  Then it will start *another* dummy X server, and pass the information
+**  about both X servers to the script.
+**  The second dummy server allows us to run the spicy client and actually
+**  test true spice functionality.
+*/
+void test_script(xdummy_t *xdummy, gconstpointer user_data)
+{
+    test_t test;
+    x11spice_server_t server;
+    xdummy_t client_server;
+    char buf[4096];
+    int rc;
+    int needs_prefix = 1;
+    int pid;
+    gchar *script_out;
+    gchar *script_dir;
+
+    if (access(user_data, X_OK | R_OK)) {
+        g_warning("Could not find client script [%s]", (char *) user_data);
+        g_test_fail();
+        return;
+    }
+
+    rc = test_common_start(&test, &server, xdummy, user_data);
+    if (rc)
+        return;
+
+    snprintf(buf, sizeof(buf), "client_%s", (char *) user_data);
+    start_server(&client_server, buf);
+    if (! client_server.running) {
+        g_warning("Could not start client X server");
+        g_test_skip("Could not start client X server");
+    }
+
+    if (strlen(server.uri) >= 8 && memcmp(server.uri, "spice://", 8) == 0)
+        needs_prefix = 0;
+
+    script_out = g_test_build_filename(G_TEST_BUILT, "run", user_data, "script.out", NULL);
+    script_dir = strdup(script_out);
+    snprintf(buf, sizeof(buf), "./%s :%s :%s %s%s %s", (char *) user_data, xdummy->display,
+            client_server.display, needs_prefix ? "spice://" : "", server.uri, dirname(script_dir));
+    free(script_dir);
+
+    g_message("Launching script %s; this could take some time.", (char *) user_data);
+
+    if (spawn_command(buf, script_out, &pid)) {
+        g_warning("Could not execute [%s]", buf);
+        g_test_fail();
+    } else {
+        waitpid(pid, &rc, 0);
+        if (!WIFEXITED(rc) || WEXITSTATUS(rc)) {
+            if (WEXITSTATUS(rc) == 77) {
+                g_warning("Skipped script test [%s]", buf);
+                g_test_skip(buf);
+            }
+            else {
+                g_warning("Error running script [%s]; status %d", buf, rc);
+                g_test_fail();
+            }
+        }
+    }
+
+    stop_server(&client_server, "client_server");
+
+    test_common_stop(&test, &server);
+}
