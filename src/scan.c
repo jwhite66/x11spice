@@ -121,30 +121,6 @@ static guint64 get_timeout(scanner_t *scanner)
     return G_USEC_PER_SEC / DESIRED_SCAN_FPS / NUM_SCANLINES;
 }
 
-static void save_ximage_pnm(shm_image_t *shmi)
-{
-    int x, y;
-    guint32 *pixel;
-    static int count = 0;
-    char fname[200];
-    FILE *fp;
-    sprintf(fname, "ximage%04d.ppm", count++);
-    fp = fopen(fname, "w");
-
-    pixel = (guint32 *) shmi->shmaddr;
-
-    fprintf(fp, "P3\n%d %d\n255\n", shmi->w, shmi->h);
-    for (y = 0; y < shmi->h; y++) {
-        for (x = 0; x < shmi->w; x++) {
-            fprintf(fp, "%u %u %u\n",
-                    ((*pixel) & 0x0000ff) >> 0,
-                    ((*pixel) & 0x00ff00) >> 8, ((*pixel) & 0xff0000) >> 16);
-            pixel++;
-        }
-    }
-    fclose(fp);
-}
-
 static void handle_scan_report(session_t *session, scan_report_t *r)
 {
     shm_image_t *shmi;
