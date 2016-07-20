@@ -62,6 +62,24 @@ static void test_common_stop(test_t * test, x11spice_server_t * server)
     x11spice_stop(server);
 }
 
+static int check_binary(char *exe)
+{
+    int rc;
+    char *p = malloc(strlen(exe) + 64);
+
+    sprintf(p, "%s --version >/dev/null 2>&1", exe);
+    rc = system(p);
+
+    if (rc) {
+        sprintf(p, "%s not available", exe);
+        g_warning(p);
+        g_test_skip(p);
+    }
+    free(p);
+
+    return rc;
+}
+
 static void check_screenshot(test_t *test, x11spice_server_t *spice_server, xdummy_t *xdummy,
                              gchar *expected_result)
 {
@@ -100,6 +118,9 @@ void test_basic(xdummy_t *xdummy, gconstpointer user_data)
     int rc;
     char buf[4096];
 
+    if (check_binary("spicy-screenshot"))
+        return;
+
     rc = test_common_start(&test, &server, xdummy, user_data);
     if (rc)
         return;
@@ -123,6 +144,9 @@ void test_resize(xdummy_t *xdummy, gconstpointer user_data)
     char buf[4096];
     int i;
     static char *modes[] = { "640x480", "800x600", "1024x768", "1280x1024", "1920x1080" };
+
+    if (check_binary("xrandr") || check_binary("spicy-screenshot"))
+        return;
 
     rc = test_common_start(&test, &server, xdummy, user_data);
     if (rc)
