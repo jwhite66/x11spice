@@ -137,6 +137,7 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
 {
     FILE *fp;
     char fdbuf[100];
+    char xorg_binary[100];
 
     fp = fopen(server->xorg_fname, "w");
     if (!fp)
@@ -150,7 +151,11 @@ static int exec_xorg(xdummy_t *server, gconstpointer user_data)
 
     snprintf(fdbuf, sizeof(fdbuf), "%d", server->pipe);
 
-    return execlp("Xorg", "Xorg", "-ac",
+    strcpy(xorg_binary, "Xorg");
+    if (access("/usr/libexec/Xorg", X_OK) == 0)
+        strcpy(xorg_binary, "/usr/libexec/Xorg");
+
+    return execlp(xorg_binary, xorg_binary, "-ac",
                   "-config", server->xorg_fname,
                   "-logfile", server->logfile, "-displayfd", fdbuf, NULL);
 }

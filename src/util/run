@@ -7,6 +7,13 @@ run_valgrind=0
 run_vdagent=1
 just_vdagent=0
 
+export HOPEFULLY_OPEN_DISPLAY=:9
+if [ -x /usr/libexec/Xorg ] ; then
+    export XORG=/usr/libexec/Xorg
+else
+    export XORG=`which Xorg`
+fi
+
 export G_MESSAGES_DEBUG=all
 
 dn=`dirname $0`
@@ -30,7 +37,7 @@ function debug {
 }
 
 function dummy {
-    Xorg $xorg_args $* :1 >$ddir/dummy.out 2>&1 &
+    Xorg $xorg_args $* $HOPEFULLY_OPEN_DISPLAY >$ddir/dummy.out 2>&1 &
 }
 
 function do_valgrind {
@@ -44,19 +51,19 @@ function do_valgrind {
 }
 
 function session {
-    DISPLAY=:1 xterm >/dev/null 2>&1 &
-    DISPLAY=:1 metacity >/dev/null 2>&1 &
-    export DISPLAY=:1
+    DISPLAY=$HOPEFULLY_OPEN_DISPLAY xterm >/dev/null 2>&1 &
+    DISPLAY=$HOPEFULLY_OPEN_DISPLAY metacity >/dev/null 2>&1 &
+    export DISPLAY=$HOPEFULLY_OPEN_DISPLAY
 
 }
 
 function vdagent {
     sleep 1
-    DISPLAY=:1 spice-vdagentd -d -f -x -X -S /tmp/xspice-vdagent -s /tmp/xspice-virtio -u /tmp/xspice-uinput >$ddir/vdagentd.out 2>&1 &
+    DISPLAY=$HOPEFULLY_OPEN_DISPLAY spice-vdagentd -d -f -x -X -S /tmp/xspice-vdagent -s /tmp/xspice-virtio -u /tmp/xspice-uinput >$ddir/vdagentd.out 2>&1 &
     sleep 1
     vdagentdpid=$!
 
-    DISPLAY=:1 spice-vdagent -o 1 -d -x -S /tmp/xspice-vdagent -s /tmp/xspice-virtio >$ddir/vdagent.out 2>&1 &
+    DISPLAY=$HOPEFULLY_OPEN_DISPLAY spice-vdagent -o 1 -d -x -S /tmp/xspice-vdagent -s /tmp/xspice-virtio >$ddir/vdagent.out 2>&1 &
     vdagentpid=$!
 }
 
