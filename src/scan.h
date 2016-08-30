@@ -21,6 +21,7 @@
 #ifndef SCAN_H_
 #define SCAN_H_
 
+#include <pixman.h>
 
 /*----------------------------------------------------------------------------
 **  Definitions and simple types
@@ -46,6 +47,7 @@ typedef struct {
     session_t *session;
     GMutex lock;
     int current_scanline;
+    pixman_region16_t region;
 } scanner_t;
 
 

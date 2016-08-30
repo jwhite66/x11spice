@@ -27,13 +27,14 @@
 **  (see display/handle_damage_notify)
 **--------------------------------------------------------------------------*/
 
-#include "x11spice.h"
-#include "session.h"
-#include "scan.h"
-
 #include <stdlib.h>
 #include <pthread.h>
 #include <glib.h>
+#include <pixman.h>
+
+#include "x11spice.h"
+#include "session.h"
+#include "scan.h"
 
 /*----------------------------------------------------------------------------
 **  We will scan over the screen by breaking it into a grid of tiles, each
@@ -289,6 +290,18 @@ static void push_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row,
 }
 
 
+static void scanner_remove_region(scanner_t *scanner, scan_report_t *r)
+{
+    pixman_region16_t remove;
+    pixman_region_init_rect(&remove, r->x, r->y, r->w, r->h);
+
+    g_mutex_lock(&scanner->lock);
+    pixman_region_subtract(&scanner->region, &scanner->region, &remove);
+    g_mutex_unlock(&scanner->lock);
+
+    pixman_region_clear(&remove);
+}
+
 static void scanner_periodic(scanner_t *scanner)
 {
     int i;
@@ -340,6 +353,8 @@ static void *scanner_run(void *opaque)
             break;
         }
 
+        scanner_remove_region(scanner, r);
+
         handle_scan_report(scanner->session, r);
         free_queue_item(r);
     }
@@ -353,6 +368,7 @@ int scanner_create(scanner_t *scanner)
     scanner->queue = g_async_queue_new_full(free_queue_item);
     g_mutex_init(&scanner->lock);
     scanner->current_scanline = 0;
+    pixman_region_init(&scanner->region);
     // FIXME - gthread?
     return pthread_create(&scanner->thread, NULL, scanner_run, scanner);
 }
@@ -372,6 +388,8 @@ int scanner_destroy(scanner_t *scanner)
         g_async_queue_unref(scanner->queue);
         scanner->queue = NULL;
     }
+    pixman_region_clear(&scanner->region);
+
     g_mutex_unlock(&scanner->lock);
 
     return rc;
@@ -391,7 +409,20 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
 
         g_mutex_lock(&scanner->lock);
         if (scanner->queue) {
-            g_async_queue_push(scanner->queue, r);
+            pixman_box16_t rect;
+            rect.x1 = x;
+            rect.x2 = x + w;
+            rect.y1 = y;
+            rect.y2 = y + h;
+
+            if (!pixman_region_contains_rectangle(&scanner->region, &rect)) {
+                pixman_region_union_rect(&scanner->region, &scanner->region, x, y, w, h);
+
+                g_async_queue_push(scanner->queue, r);
+            }
+            else {
+                free(r);
+            }
             rc = 0;
         }
         else {
