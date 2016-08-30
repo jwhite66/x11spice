@@ -48,6 +48,7 @@ typedef struct {
     GMutex lock;
     int current_scanline;
     pixman_region16_t region;
+    int target_fps;
 } scanner_t;
 
 

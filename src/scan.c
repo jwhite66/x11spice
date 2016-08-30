@@ -44,7 +44,8 @@
 **--------------------------------------------------------------------------*/
 #define NUM_SCANLINES               32
 #define NUM_HORIZONTAL_TILES        NUM_SCANLINES
-#define DESIRED_SCAN_FPS            30
+#define MAX_SCAN_FPS                30
+#define MIN_SCAN_FPS                 1
 
 /* If we have more than this number of changes in any given row, we just
    copy the whole row */
@@ -115,11 +116,17 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
 
 static guint64 get_timeout(scanner_t *scanner)
 {
-    // FIXME - make this a bit smarter...
-    //         in particular, it should scan much less frequently
-    //         if there is no client connected
+    return G_USEC_PER_SEC / scanner->target_fps / NUM_SCANLINES;
+}
 
-    return G_USEC_PER_SEC / DESIRED_SCAN_FPS / NUM_SCANLINES;
+static void scan_update_fps(scanner_t *scanner, int increment)
+{
+    scanner->target_fps += increment;
+    if (scanner->target_fps > MAX_SCAN_FPS)
+        scanner->target_fps = MAX_SCAN_FPS;
+
+    if (scanner->target_fps < MIN_SCAN_FPS)
+        scanner->target_fps = MIN_SCAN_FPS;
 }
 
 static void handle_scan_report(session_t *session, scan_report_t *r)
@@ -344,9 +351,11 @@ static void *scanner_run(void *opaque)
         scan_report_t *r;
         r = (scan_report_t *) g_async_queue_timeout_pop(scanner->queue, get_timeout(scanner));
         if (!r) {
+            scan_update_fps(scanner, -1);
             scanner_periodic(scanner);
             continue;
         }
+        scan_update_fps(scanner, 1);
 
         if (r->type == EXIT_SCAN_REPORT) {
             free_queue_item(r);
@@ -369,6 +378,7 @@ int scanner_create(scanner_t *scanner)
     g_mutex_init(&scanner->lock);
     scanner->current_scanline = 0;
     pixman_region_init(&scanner->region);
+    scanner->target_fps = MIN_SCAN_FPS;
     // FIXME - gthread?
     return pthread_create(&scanner->thread, NULL, scanner_run, scanner);
 }
