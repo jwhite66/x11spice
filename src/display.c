@@ -80,8 +80,10 @@ static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_ev
     int imglen;
     uint32_t *imgdata;
 
+#if defined(DEBUG_DISPLAY_EVENTS)
     g_debug("Cursor Notify [seq %d|subtype %d|serial %u]",
             cev->sequence, cev->subtype, cev->cursor_serial);
+#endif
 
     icookie = xcb_xfixes_get_cursor_image(display->c);
 
@@ -111,10 +113,12 @@ static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *
     int i, n;
     pixman_box16_t *p;
 
+#if defined(DEBUG_DISPLAY_EVENTS)
     g_debug("Damage Notify [seq %d|level %d|more %d|area (%dx%d)@%dx%d|geo (%dx%d)@%dx%d",
             dev->sequence, dev->level, dev->level & 0x80,
             dev->area.width, dev->area.height, dev->area.x, dev->area.y,
             dev->geometry.width, dev->geometry.height, dev->geometry.x, dev->geometry.y);
+#endif
 
     pixman_region_union_rect(damage_region, damage_region,
                              dev->area.x, dev->area.y, dev->area.width, dev->area.height);
@@ -138,10 +142,13 @@ static void handle_damage_notify(display_t *display, xcb_damage_notify_event_t *
 
 static void handle_configure_notify(display_t *display, xcb_configure_notify_event_t *cev)
 {
+#if defined(DEBUG_DISPLAY_EVENTS)
     g_debug
         ("%s:[event %u|window %u|above_sibling %u|x %d|y %d|width %d|height %d|border_width %d|override_redirect %d]",
          __func__, cev->event, cev->window, cev->above_sibling, cev->x, cev->y, cev->width,
          cev->height, cev->border_width, cev->override_redirect);
+#endif
+
     if (cev->window != display->root) {
         g_debug("not main window; skipping.");
         return;
