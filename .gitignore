@@ -29,3 +29,5 @@ x11spice_test
 *.gcda
 *coverage.info.tmp
 x11spice-1.0-coverage*
+
+callgrind.out.*

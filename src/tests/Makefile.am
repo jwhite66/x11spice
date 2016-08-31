@@ -19,6 +19,12 @@ x11spice_test_SOURCES = \
 
 noinst_PROGRAMS = $(TESTS)
 
-.PHONY: leakcheck.log
+.PHONY: leakcheck.log callgrind.out.x
 leakcheck.log: 
 	VALGRIND="valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --suppressions=options.supp --suppressions=gui.supp --log-file=leakcheck.log" make check
+
+callgrind.out.x:
+	VALGRIND="valgrind --tool=callgrind --log-file=callgrind.out.log" make check
+
+clean-local:
+	rm -f callgrind.out.*
