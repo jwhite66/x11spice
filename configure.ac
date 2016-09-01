@@ -14,8 +14,13 @@ PKG_CHECK_MODULES(SPICE_PROTOCOL, spice-protocol)
 PKG_CHECK_MODULES(GLIB2, glib-2.0)
 PKG_CHECK_MODULES(PIXMAN, pixman-1)
 
+AM_CONDITIONAL([HAVE_GTEST], [pkg-config --atleast-version=2.38 glib-2.0])
+
 AC_PROG_SED
-AX_CODE_COVERAGE()
+# To use gcov, make sure you have the appropriate autoconf macors,
+# and uncomment this line, and the matching one in src/Makefile.am.
+#AX_CODE_COVERAGE()
+
 
 AC_PROG_CC
 AC_CONFIG_FILES(Makefile src/Makefile src/tests/Makefile)

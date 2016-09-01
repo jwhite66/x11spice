@@ -26,7 +26,7 @@
 #include <xcb/shm.h>
 
 
-typedef struct session_struct session_t;
+struct session_struct;
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
@@ -59,14 +59,14 @@ typedef struct {
     shm_image_t *scanline;
 
     pthread_t event_thread;
-    session_t *session;
+    struct session_struct *session;
 } display_t;
 
 
 /*----------------------------------------------------------------------------
 **  Prototypes
 **--------------------------------------------------------------------------*/
-int display_open(display_t *d, session_t *session);
+int display_open(display_t *d, struct session_struct *session);
 void display_close(display_t *display);
 int display_create_screen_images(display_t *d);
 void display_destroy_screen_images(display_t *d);

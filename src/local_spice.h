@@ -26,7 +26,7 @@
 #include "options.h"
 #include "display.h"
 
-typedef struct session_struct session_t;
+struct session_struct;
 
 /*----------------------------------------------------------------------------
 **  Structure definitions
@@ -48,7 +48,7 @@ typedef struct {
     QXLWorker *worker;
     int compression_level;
 
-    session_t *session;
+    struct session_struct *session;
 } spice_t;
 
 typedef enum { RELEASE_SHMI, RELEASE_MEMORY } release_type_t;

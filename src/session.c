@@ -74,12 +74,12 @@ void *session_pop_draw(session_t *session)
         return ret;
     }
 
-    if (!g_mutex_trylock(&session->lock))
+    if (!g_mutex_trylock(session->lock))
         return ret;
 
     ret = g_async_queue_try_pop(session->draw_queue);
     session->draw_command_in_progress = (ret != NULL);
-    g_mutex_unlock(&session->lock);
+    g_mutex_unlock(session->lock);
 
     return ret;
 }
@@ -96,11 +96,11 @@ int session_draw_waiting(session_t *session)
         return ret;
     }
 
-    if (!g_mutex_trylock(&session->lock))
+    if (!g_mutex_trylock(session->lock))
         return ret;
 
     ret = g_async_queue_length(session->draw_queue);
-    g_mutex_unlock(&session->lock);
+    g_mutex_unlock(session->lock);
     return (ret);
 }
 
@@ -215,11 +215,11 @@ end:
 static void flush_and_lock(session_t *s)
 {
     while (1) {
-        g_mutex_lock(&s->lock);
+        g_mutex_lock(s->lock);
         if (!s->draw_command_in_progress)
             break;
 
-        g_mutex_unlock(&s->lock);
+        g_mutex_unlock(s->lock);
         // FIXME - g_threads?
         sched_yield();
     }
@@ -243,7 +243,9 @@ void session_end(session_t *s)
     s->cursor_queue = NULL;
     s->draw_queue = NULL;
 
-    g_mutex_unlock(&s->lock);
+    g_mutex_unlock(s->lock);
+    g_mutex_free(s->lock);
+    s->lock = NULL;
 
 }
 
@@ -251,7 +253,7 @@ int session_create(session_t *s)
 {
     s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
     s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
-    g_mutex_init(&s->lock);
+    s->lock = g_mutex_new();
 
     return 0;
 }
@@ -272,7 +274,7 @@ int session_recreate_primary(session_t *s)
         rc = spice_create_primary(&s->spice, f->w, f->h, f->bytes_per_line, f->shmaddr);
     }
 
-    g_mutex_unlock(&s->lock);
+    g_mutex_unlock(s->lock);
     return rc;
 }
 

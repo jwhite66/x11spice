@@ -28,7 +28,7 @@
 **--------------------------------------------------------------------------*/
 typedef enum { DAMAGE_SCAN_REPORT, SCANLINE_SCAN_REPORT, EXIT_SCAN_REPORT } scan_type_t;
 
-typedef struct session_struct session_t;
+struct session_struct;
 /*----------------------------------------------------------------------------
 **  Structure definitions
 **--------------------------------------------------------------------------*/
@@ -44,8 +44,8 @@ typedef struct {
 typedef struct {
     pthread_t thread;
     GAsyncQueue *queue;
-    session_t *session;
-    GMutex lock;
+    struct session_struct *session;
+    GMutex *lock;
     int current_scanline;
     pixman_region16_t region;
     int target_fps;

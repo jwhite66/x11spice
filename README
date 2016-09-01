@@ -27,9 +27,8 @@ Building is pretty much a matter of doing configure && make.
 
 If you are building from git, you will likely want to do:
     ./autogen.sh
-to create and run configure.  You will need autoconf and automake,
-along with the AX_CODE_COVERAGE macro.  On Fedora, that is installed
-by the autoconf-archive package.
+to create and run configure.  You will need autoconf and automake.
+
 
 If you have a regular source drop, you should be able to do:
     ./configure
@@ -75,6 +74,15 @@ should start a session on port 5900 and give you a one time
 password you can use to connect.
 
 Refer to the x11spice man page for more details.
+
+
+Using code coverage (gcov)
+-------------------------
+If you want to use gcov for source code coverage, you will need
+the AX_CODE_COVERAGE macro.  On Fedora, that is installed
+by the autoconf-archive package.  Once you have that available,
+uncomment the appropriate line in configure.ac and src/Makefile.am
+and rebuild.
 
 
 Community

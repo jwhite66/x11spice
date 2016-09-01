@@ -40,7 +40,7 @@ typedef struct session_struct {
     scanner_t scanner;
     int running;
 
-    GMutex lock;
+    GMutex *lock;
     int draw_command_in_progress;
 
     GAsyncQueue *cursor_queue;

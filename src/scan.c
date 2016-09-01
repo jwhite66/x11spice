@@ -141,9 +141,9 @@ static void handle_scan_report(session_t *session, scan_report_t *r)
 
     if (read_shm_image(&session->display, shmi, r->x, r->y) == 0) {
         //save_ximage_pnm(shmi);
-        g_mutex_lock(&session->lock);
+        g_mutex_lock(session->lock);
         display_copy_image_into_fullscreen(&session->display, shmi, r->x, r->y);
-        g_mutex_unlock(&session->lock);
+        g_mutex_unlock(session->lock);
 
         QXLDrawable *drawable = shm_image_to_drawable(&session->spice, shmi, r->x, r->y);
         if (drawable) {
@@ -302,9 +302,9 @@ static void scanner_remove_region(scanner_t *scanner, scan_report_t *r)
     pixman_region16_t remove;
     pixman_region_init_rect(&remove, r->x, r->y, r->w, r->h);
 
-    g_mutex_lock(&scanner->lock);
+    g_mutex_lock(scanner->lock);
     pixman_region_subtract(&scanner->region, &scanner->region, &remove);
-    g_mutex_unlock(&scanner->lock);
+    g_mutex_unlock(scanner->lock);
 
     pixman_region_clear(&remove);
 }
@@ -319,7 +319,7 @@ static void scanner_periodic(scanner_t *scanner)
     int offset;
     int rc;
 
-    g_mutex_lock(&scanner->session->lock);
+    g_mutex_lock(scanner->session->lock);
     h = scanner->session->display.fullscreen->h / NUM_SCANLINES;
 
     offset = scanlines[scanner->current_scanline++];
@@ -332,7 +332,7 @@ static void scanner_periodic(scanner_t *scanner)
         rc = display_find_changed_tiles(&scanner->session->display,
                                         y, tiles_changed[i], NUM_HORIZONTAL_TILES);
         if (rc < 0) {
-            g_mutex_unlock(&scanner->session->lock);
+            g_mutex_unlock(scanner->session->lock);
             return;
         }
 
@@ -341,8 +341,18 @@ static void scanner_periodic(scanner_t *scanner)
     grow_changed_tiles(scanner, tiles_changed_in_row, tiles_changed);
     push_changed_tiles(scanner, tiles_changed_in_row, tiles_changed);
 
-    g_mutex_unlock(&scanner->session->lock);
+    g_mutex_unlock(scanner->session->lock);
 }
+
+#if ! GLIB_CHECK_VERSION(2, 31, 18)
+static gpointer g_async_queue_timeout_pop(GAsyncQueue *queue, guint64 t)
+{
+    GTimeVal end;
+    g_get_current_time(&end);
+    g_time_val_add(&end, t);
+    return g_async_queue_timed_pop(queue, &end);
+}
+#endif
 
 static void *scanner_run(void *opaque)
 {
@@ -375,7 +385,7 @@ static void *scanner_run(void *opaque)
 int scanner_create(scanner_t *scanner)
 {
     scanner->queue = g_async_queue_new_full(free_queue_item);
-    g_mutex_init(&scanner->lock);
+    scanner->lock = g_mutex_new();
     scanner->current_scanline = 0;
     pixman_region_init(&scanner->region);
     scanner->target_fps = MIN_SCAN_FPS;
@@ -393,14 +403,16 @@ int scanner_destroy(scanner_t *scanner)
     if (rc == 0)
         rc = (int) (long) err;
 
-    g_mutex_lock(&scanner->lock);
+    g_mutex_lock(scanner->lock);
     if (scanner->queue) {
         g_async_queue_unref(scanner->queue);
         scanner->queue = NULL;
     }
     pixman_region_clear(&scanner->region);
 
-    g_mutex_unlock(&scanner->lock);
+    g_mutex_unlock(scanner->lock);
+    g_mutex_free(scanner->lock);
+    scanner->lock = NULL;
 
     return rc;
 }
@@ -417,7 +429,7 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
         r->w = w;
         r->h = h;
 
-        g_mutex_lock(&scanner->lock);
+        g_mutex_lock(scanner->lock);
         if (scanner->queue) {
             pixman_box16_t rect;
             rect.x1 = x;
@@ -439,7 +451,7 @@ int scanner_push(scanner_t *scanner, scan_type_t type, int x, int y, int w, int 
             free(r);
             rc = X11SPICE_ERR_SHUTTING_DOWN;
         }
-        g_mutex_unlock(&scanner->lock);
+        g_mutex_unlock(scanner->lock);
     }
 
 #if defined(DEBUG_SCANLINES)
