@@ -80,7 +80,7 @@ static int check_binary(char *exe, char *display)
 
     if (rc) {
         sprintf(p, "%s not available", exe);
-        g_warning(p);
+        g_warning("%s not available", exe);
         g_test_skip(p);
     }
     free(p);
