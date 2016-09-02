@@ -222,9 +222,10 @@ static void set_compression_level(QXLInstance *qin, int level)
     s->compression_level = level;
 }
 
+/* Newer spice servers no longer transmit this information,
+ * so let's just disregard it */
 static void set_mm_time(QXLInstance *qin, uint32_t mm_time)
 {
-    g_debug("TODO: %s UNIMPLEMENTED!", __func__);
 }
 
 static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
