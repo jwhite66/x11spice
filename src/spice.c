@@ -470,8 +470,7 @@ int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shm
     surface.height = h;
     surface.width = w;
 
-    /* TODO - explore negative stride */
-    surface.stride = bytes_per_line;
+    surface.stride = -1 * bytes_per_line;
     surface.type = QXL_SURF_TYPE_PRIMARY;
     surface.flags = 0;
     surface.group_id = 0;
