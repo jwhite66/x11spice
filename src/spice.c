@@ -196,7 +196,6 @@ static void channel_event(int event, SpiceChannelEventInfo *info)
 static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
 {
     static int count = 0;
-    spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
 
     static QXLDevMemSlot slot = {
         .slot_group_id = 0,
@@ -214,21 +213,18 @@ static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
     }
 
     spice_qxl_add_memslot(qin, &slot);
-    // FIXME - do we ever need the worker?
-    s->worker = qxl_worker;
 }
 
 static void set_compression_level(QXLInstance *qin, int level)
 {
     spice_t *s = SPICE_CONTAINEROF(qin, spice_t, display_sin);
-    // FIXME - compression level unused?
+    // TODO - set_compression_level is unused
     s->compression_level = level;
 }
 
-// FIXME - deprecated?
 static void set_mm_time(QXLInstance *qin, uint32_t mm_time)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("TODO: %s UNIMPLEMENTED!", __func__);
 }
 
 static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
@@ -239,9 +235,8 @@ static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
     info->memslot_id_bits = 1;
     info->memslot_gen_bits = 1;
     info->n_surfaces = 1;
-    // FIXME - think about surface count, and no thoughtfulness on this
-    // uint32_t qxl_ram_size;
-    // uint8_t internal_groupslot_id;
+
+    /* TODO - it would be useful to think through surface count a bit here */
 }
 
 
@@ -308,12 +303,12 @@ static int req_cursor_notification(QXLInstance *qin)
 
 static void notify_update(QXLInstance *qin, uint32_t update_id)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("TODO: %s UNIMPLEMENTED", __func__);
 }
 
 static int flush_resources(QXLInstance *qin)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("TODO: %s UNIMPLEMENTEDs", __func__);
     // Return 0 to direct the server to flush resources
     return 1;
 }
@@ -327,7 +322,7 @@ static void async_complete(QXLInstance *qin, uint64_t cookie)
 static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
                                  struct QXLRect *updated_rects, uint32_t num_updated_rects)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("TODO: %s UNIMPLEMENTED!", __func__);
 }
 
 static int client_monitors_config(QXLInstance *qin, VDAgentMonitorsConfig *monitors_config)
@@ -348,7 +343,7 @@ static int client_monitors_config(QXLInstance *qin, VDAgentMonitorsConfig *monit
                 monitors_config->monitors[i].depth,
                 monitors_config->monitors[i].x, monitors_config->monitors[i].y);
 
-    g_debug("FIXME! UNIMPLEMENTED! %s", __func__);
+    g_debug("TODO: %s UNIMPLEMENTED", __func__);
     return FALSE;
 }
 
@@ -425,7 +420,7 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
 
 void tablet_set_logical_size(SpiceTabletInstance *tablet, int width, int height)
 {
-    g_debug("FIXME! UNIMPLEMENTED! %s (width %dx%d)", __func__, width, height);
+    g_debug("TODO: %s UNIMPLEMENTED. (width %dx%d)", __func__, width, height);
 }
 
 void tablet_position(SpiceTabletInstance *tablet, int x, int y, uint32_t buttons_state)
@@ -474,7 +469,8 @@ int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shm
     memset(&surface, 0, sizeof(surface));
     surface.height = h;
     surface.width = w;
-    // FIXME - negative stride?
+
+    /* TODO - explore negative stride */
     surface.stride = bytes_per_line;
     surface.type = QXL_SURF_TYPE_PRIMARY;
     surface.flags = 0;
@@ -484,7 +480,7 @@ int spice_create_primary(spice_t *s, int w, int h, int bytes_per_line, void *shm
     // Position appears to be completely unused
     surface.position = 0;
 
-    // FIXME - compute this dynamically?
+    /* TODO - compute this dynamically */
     surface.format = SPICE_SURFACE_FMT_32_xRGB;
     surface.mem = (QXLPHYSICAL) shmaddr;
 

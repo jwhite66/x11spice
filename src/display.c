@@ -167,7 +167,6 @@ static void *handle_xevents(void *opaque)
 
     pixman_region_init(&damage_region);
 
-    // FIXME - we do not have a good way to cause this thread to exit gracefully
     while ((ev = xcb_wait_for_event(display->c))) {
         if (ev->response_type == display->xfixes_ext->first_event + XCB_XFIXES_CURSOR_NOTIFY)
             handle_cursor_notify(display, (xcb_xfixes_cursor_notify_event_t *) ev);
@@ -197,7 +196,7 @@ static void *handle_xevents(void *opaque)
 
 static int register_for_events(display_t *d)
 {
-    uint32_t events = XCB_EVENT_MASK_STRUCTURE_NOTIFY;  // FIXME - do we need this? | XCB_EVENT_MASK_POINTER_MOTION;
+    uint32_t events = XCB_EVENT_MASK_STRUCTURE_NOTIFY;
     xcb_void_cookie_t cookie;
     xcb_generic_error_t *error;
 
@@ -320,6 +319,17 @@ int display_open(display_t *d, session_t *session)
 
     return rc;
 }
+
+/* 
+  TODO: Implement a cache for shared memory handles
+        That is, instead of doing the shmget/shmat for every read,
+        we should cache the shmid, and reuse if we're doing a later
+        read of a similar size.
+
+        We would likely see a 40% improvement in raw read time.  Note
+        that a callgrind run suggested that would be on the order of 5%
+        overall.
+*/
 
 shm_image_t *create_shm_image(display_t *d, int w, int h)
 {
@@ -448,7 +458,6 @@ void destroy_shm_image(display_t *d, shm_image_t *shmi)
     free(shmi);
 }
 
-// FIXME - Can we / should we do pushing to spice using the fullscreen?
 int display_create_screen_images(display_t *d)
 {
     d->fullscreen = create_shm_image(d, 0, 0);
@@ -480,7 +489,6 @@ void display_destroy_screen_images(display_t *d)
 
 int display_start_event_thread(display_t *d)
 {
-    // FIXME - gthread?
     return pthread_create(&d->event_thread, NULL, handle_xevents, d);
 }
 

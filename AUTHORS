@@ -2,4 +2,5 @@ The current active x11spice maintainer is
 
     Jeremy White <jwhite@codeweavers.com>
 
-FIXME.  Mad props to x11vnc.
+Note that this project derives a great deal of inspiration from the x11vnc
+project; the initial author wanted to be sure to give mad props to them.

@@ -220,7 +220,6 @@ static void flush_and_lock(session_t *s)
             break;
 
         g_mutex_unlock(s->lock);
-        // FIXME - g_threads?
         sched_yield();
     }
 }

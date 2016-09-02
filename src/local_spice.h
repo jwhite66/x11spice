@@ -45,7 +45,6 @@ typedef struct {
     SpiceTabletInstance tablet_sin;
     uint32_t buttons_state;
 
-    QXLWorker *worker;
     int compression_level;
 
     struct session_struct *session;

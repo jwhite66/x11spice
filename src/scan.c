@@ -59,7 +59,6 @@ static int scanlines[NUM_SCANLINES] = {
 };
 
 
-// FIXME - refactor and move this...
 static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, int y)
 {
     QXLDrawable *drawable;
@@ -108,8 +107,6 @@ static QXLDrawable *shm_image_to_drawable(spice_t *s, shm_image_t *shmi, int x, 
     qxl_image->bitmap.stride = shmi->bytes_per_line;
     qxl_image->bitmap.palette = 0;
     qxl_image->bitmap.data = (QXLPHYSICAL) shmi->shmaddr;
-
-    // FIXME - cache images at all?
 
     return drawable;
 }
@@ -389,7 +386,6 @@ int scanner_create(scanner_t *scanner)
     scanner->current_scanline = 0;
     pixman_region_init(&scanner->region);
     scanner->target_fps = MIN_SCAN_FPS;
-    // FIXME - gthread?
     return pthread_create(&scanner->thread, NULL, scanner_run, scanner);
 }
 
