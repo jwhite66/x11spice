@@ -149,7 +149,7 @@ static void usage(options_t *options, char *argv0)
 
 int options_handle_ssl(options_t *options, const char *spec)
 {
-    char *save;
+    char *save = NULL;
     char *in = strdup(spec);
     char *p;
     int i = 0;
