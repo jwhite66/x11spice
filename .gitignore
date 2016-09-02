@@ -31,3 +31,5 @@ x11spice_test
 x11spice-1.0-coverage*
 
 callgrind.out.*
+
+*.tar.gz

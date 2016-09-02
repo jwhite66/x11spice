@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=x11spice
+Comment=Utility to share an X11 display via Spice
+Icon=x11spice
+Exec=x11spice
+Categories=Utility;X11;Internet;
+Terminal=false

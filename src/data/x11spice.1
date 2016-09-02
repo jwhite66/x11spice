@@ -30,7 +30,7 @@ or exit the program altogether.
 This will read configuration settings from FILENAME, ignoring all settings
 in normal XDG locations.  If not provided, x11spice will first read settings
 from /etc/xdg/x11spice/x11spice.conf, then overwrite them with any settings read
-from ~/.config/x11spice/x11spice.conf. 
+from ~/.config/x11spice/x11spice.conf.
 .TP
 \fB\-\-display\fR=\fIDISPLAY\fR
 DISPLAY will use an alternate Xorg server.  The string should be in the standard
@@ -77,7 +77,7 @@ commands.
 .SH EXIT STATUS
 x11spice will return a status of 0 if it is able to start a Spice session.
 It will return non zero in the event of an error.
-.SH EXAMPLE 
+.SH EXAMPLE
 
 x11spice --generate-password
 

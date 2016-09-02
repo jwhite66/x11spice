@@ -28,11 +28,20 @@ x11spice_SOURCES = \
     x11spice.h \
     main.c
 
-dist_man_MANS = x11spice.1
+dist_man_MANS = data/x11spice.1
 
 nobase_sysconf_DATA = xdg/x11spice/x11spice.conf
 
-EXTRA_DIST = xdg/x11spice/x11spice.conf
+data_desktopdir = $(datadir)/applications
+data_desktop_DATA = data/x11spice.desktop
+
+data_icondir = $(datadir)/icons/hicolor/scalable/apps
+data_icon_DATA = data/x11spice.svg
+
+EXTRA_DIST = \
+    xdg/x11spice/x11spice.conf \
+    data/x11spice.desktop \
+    data/x11spice.svg
 
 if HAVE_GTEST
     SUBDIRS = tests
