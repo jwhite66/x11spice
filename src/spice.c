@@ -609,7 +609,18 @@ static int try_listen(spice_t *s, options_t *options)
         spice_server_set_addr(s->server, addr, 0);
         free(addr);
     }
-    spice_server_set_port(s->server, port);
+
+    if (options->ssl.enabled) {
+        spice_server_set_tls(s->server, port,
+                            options->ssl.ca_cert_file,
+                            options->ssl.certs_file,
+                            options->ssl.private_key_file,
+                            options->ssl.key_password,
+                            options->ssl.dh_key_file,
+                            options->ssl.ciphersuite);
+    } else {
+        spice_server_set_port(s->server, port);
+    }
 
     return 0;
 }

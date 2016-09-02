@@ -142,8 +142,63 @@ static void usage(options_t *options, char *argv0)
     printf("%s [--password=<password>]\n", indent);
     printf("%s [--password-file={-|<password-file}]\n", indent);
     printf("%s [--config=<config-file>]\n", indent);
+    printf("%s [--ssl[=<ssl-spec>]]\n", indent);
     printf("%s [--hide]\n", indent);
     printf("%s [--minimize]\n", indent);
+}
+
+int options_handle_ssl(options_t *options, const char *spec)
+{
+    char *save;
+    char *in = strdup(spec);
+    char *p;
+    int i = 0;
+    int rc = 0;
+
+    for (p = strtok_r(in, ",", &save); p; p = strtok_r(NULL, ",", &save), i++) {
+        if (strlen(p) == 0)
+            continue;
+
+        switch(i) {
+            case 0:
+                options->ssl.ca_cert_file = strdup(p);
+                break;
+            case 1:
+                options->ssl.certs_file = strdup(p);
+                break;
+            case 2:
+                options->ssl.private_key_file = strdup(p);
+                break;
+            case 3:
+                options->ssl.key_password = strdup(p);
+                break;
+            case 4:
+                options->ssl.dh_key_file = strdup(p);
+                break;
+            case 5:
+                options->ssl.ciphersuite = strdup(p);
+                break;
+            default:
+                fprintf(stderr, "Error: invalid ssl specification.");
+                rc = X11SPICE_ERR_BADARGS;
+                break;
+        }
+    }
+
+    free(in);
+    return rc;
+}
+
+void options_handle_ssl_file_options(options_t *options,
+                                     GKeyFile *userkey, GKeyFile *systemkey)
+{
+    options->ssl.enabled = bool_option(userkey, systemkey, "ssl", "enabled");
+    options->ssl.ca_cert_file = string_option(userkey, systemkey, "ssl", "ca-cert-file");
+    options->ssl.certs_file = string_option(userkey, systemkey, "ssl", "certs-file");
+    options->ssl.private_key_file = string_option(userkey, systemkey, "ssl", "private-key-file");
+    options->ssl.key_password = string_option(userkey, systemkey, "ssl", "key-password-file");
+    options->ssl.dh_key_file = string_option(userkey, systemkey, "ssl", "dh-key-file");
+    options->ssl.ciphersuite = string_option(userkey, systemkey, "ssl", "ciphersuite");
 }
 
 void options_handle_user_config(int argc, char *argv[], options_t *options)
@@ -162,7 +217,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     int longindex = 0;
 
     enum option_types {  OPTION_VIEWONLY, OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
-                         OPTION_PASSWORD, OPTION_PASSWORD_FILE, OPTION_CONFIG,
+                         OPTION_PASSWORD, OPTION_PASSWORD_FILE, OPTION_CONFIG, OPTION_SSL,
                          OPTION_GENERATE_PASSWORD, OPTION_DISPLAY, OPTION_MINIMIZE,
                          OPTION_HELP
     };
@@ -176,6 +231,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
         {"password",                 1, 0,       OPTION_PASSWORD },
         {"password-file",            1, 0,       OPTION_PASSWORD_FILE },
         {"config",                   1, 0,       OPTION_CONFIG },
+        {"ssl",                      2, 0,       OPTION_SSL},
         {"generate-password",        2, 0,       OPTION_GENERATE_PASSWORD },
         {"display",                  1, 0,       OPTION_DISPLAY },
         {"minimize",                 0, 0,       OPTION_MINIMIZE },
@@ -213,6 +269,15 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
             case OPTION_CONFIG:
                 /* This was handled previously; we can ignore */
+                break;
+
+            case OPTION_SSL:
+                options->ssl.enabled = 1;
+                if (optarg) {
+                    rc = options_handle_ssl(options, optarg);
+                    if (rc)
+                        return rc;
+                }
                 break;
 
             case OPTION_GENERATE_PASSWORD:
@@ -301,6 +366,8 @@ void options_from_config(options_t *options)
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit-on-disconnect");
     options->virtio_path = string_option(userkey, systemkey, "spice", "virtio-path");
     options->uinput_path = string_option(userkey, systemkey, "spice", "uinput-path");
+
+    options_handle_ssl_file_options(options, userkey, systemkey);
 
     if (systemkey)
         g_key_file_free(systemkey);

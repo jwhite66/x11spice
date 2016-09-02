@@ -55,6 +55,17 @@ This will expose the password in the process list, which is a security concern.
 If specified, x11spice will read the password from the given file, or stdin in the
 case of a file named \fI-\fR.
 .TP
+\fB\-\-ssl\fR[=\fIspec\fR]
+This will turn on SSL mode.  At a minimum, SSL mode requires a server cert, private key,
+and a CA certificate.  You can also optionally provide a key password, a dh_key_file,
+and a ciphersuite.
+
+The optional 'spec', if given, is a comma delimited list of file names.  The first file
+name will be the CA cert .pem file, the second one the server cert file, the third the
+private key.  The optional fourth parameter is the key password, then the dh_key_file,
+and finally the ciphersuite.  You can skip one of the options by providing a blank entry
+(e.g. --ssl=ca-cert.pem,,private-key.pem).
+.TP
 \fB\-\-timeout\fR[=\fISECONDS\fR]
 If a timeout is specificed, if no connection is made within the given number of seconds,
 x11spice will exit.

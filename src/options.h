@@ -30,6 +30,16 @@
 **  Structure definitions
 **--------------------------------------------------------------------------*/
 typedef struct {
+    int  enabled;
+    char *ca_cert_file;
+    char *certs_file;
+    char *private_key_file;
+    char *key_password;
+    char *dh_key_file;
+    char *ciphersuite;
+} ssl_options_t;
+
+typedef struct {
     /* Both config and command line arguments */
     long timeout;
     int minimize;
@@ -38,6 +48,8 @@ typedef struct {
     int hide;
     char *display;
     char *listen;
+
+    ssl_options_t ssl;
 
     /* config only */
     char *spice_password;
