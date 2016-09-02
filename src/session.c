@@ -250,6 +250,10 @@ void session_end(session_t *s)
 
 int session_create(session_t *s)
 {
+#if ! GLIB_CHECK_VERSION(2, 32, 0)
+    g_thread_init(NULL);
+#endif
+
     s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
     s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
     s->lock = g_mutex_new();
