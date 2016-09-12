@@ -5,8 +5,9 @@ Summary:        Utility to share an x11 desktop via Spice
 Group:          Applications/System
 License:        GPLv3+
 URL:            http://spice-space.org/
-Source0:        http://spice-space.org/download/releases/%{name}-%{version}.tar.gz
+Source0:        http://people.freedesktop.org/~jwhite/%{name}/%{name}-%{version}.tar.gz
 BuildRequires:  glib2-devel gtk2-devel libX11-devel spice-server-devel spice-protocol pixman-devel
+BuildRequires:  libxcb-devel >= 1.11
 
 %description
 Utility to share x11 desktops via Spice.
