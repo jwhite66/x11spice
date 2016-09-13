@@ -123,6 +123,20 @@ void gui_destroy(gui_t *gui)
     gui->window = NULL;
 }
 
+void gui_report_error(gui_t *gui, const char *message)
+{
+    GtkWidget *dialog;
+
+    dialog = gtk_message_dialog_new (GTK_WINDOW(gui->window),
+                GTK_DIALOG_DESTROY_WITH_PARENT,
+                GTK_MESSAGE_ERROR,
+                GTK_BUTTONS_CLOSE,
+                message);
+
+    gtk_dialog_run (GTK_DIALOG (dialog));
+    gtk_widget_destroy (dialog);
+}
+
 #if defined(GUI_MAIN)
 #include <locale.h>
 #include <string.h>

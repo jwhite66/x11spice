@@ -460,6 +460,20 @@ int options_process_io(options_t *options)
     return 0;
 }
 
+int options_impossible_config(options_t *options)
+{
+    if (options->spice_password)
+        return 0;
+
+    if (options->generate_password || options->password_file)
+        return 0;
+
+    if (options->disable_ticketing)
+        return 0;
+
+    return 1;
+}
+
 #if defined(OPTIONS_MAIN)
 int main(int argc, char *argv[])
 {

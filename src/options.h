@@ -74,5 +74,6 @@ int options_parse_arguments(int argc, char *argv[], options_t *options);
 int options_process_io(options_t *options);
 void options_free(options_t *options);
 void options_from_config(options_t *options);
+int options_impossible_config(options_t *options);
 
 #endif

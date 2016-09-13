@@ -99,6 +99,16 @@ int main(int argc, char *argv[])
     gui_created = 1;
 
     /*------------------------------------------------------------------------
+    **  Make sure we have a way to operate.
+    **----------------------------------------------------------------------*/
+    if (options_impossible_config(&session.options)) {
+        gui_report_error(&session.gui,
+                         "You must provide some authentication method.\n"
+                         "Refer to the x11spice man page for more details.");
+        goto exit;
+    }
+
+    /*------------------------------------------------------------------------
     **  Start up a spice server
     **----------------------------------------------------------------------*/
     rc = spice_start(&session.spice, &session.options, session.display.fullscreen);

@@ -49,4 +49,6 @@ void gui_destroy(gui_t *gui);
 void gui_remote_connected(gui_t *gui, const char *details);
 void gui_remote_disconnected(gui_t *gui);
 
+void gui_report_error(gui_t *gui, const char *message);
+
 #endif
