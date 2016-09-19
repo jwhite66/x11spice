@@ -194,15 +194,15 @@ int session_start(session_t *s)
     s->display.session = s;
     s->scanner.session = s;
 
-    rc = display_start_event_thread(&s->display);
-    if (rc)
-        return rc;
-
     s->running = TRUE;
 
     rc = scanner_create(&s->scanner);
     if (rc)
         goto end;
+
+    rc = display_start_event_thread(&s->display);
+    if (rc)
+        return rc;
 
 
 end:
