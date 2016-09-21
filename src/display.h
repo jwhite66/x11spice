@@ -71,6 +71,7 @@ void display_close(display_t *display);
 int display_create_screen_images(display_t *d);
 void display_destroy_screen_images(display_t *d);
 int display_start_event_thread(display_t *d);
+void display_stop_event_thread(display_t *d);
 int display_find_changed_tiles(display_t *d, int row, int *tiles, int tiles_across);
 void display_copy_image_into_fullscreen(display_t *d, shm_image_t *shmi, int x, int y);
 

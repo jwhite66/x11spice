@@ -492,6 +492,13 @@ int display_start_event_thread(display_t *d)
     return pthread_create(&d->event_thread, NULL, handle_xevents, d);
 }
 
+void display_stop_event_thread(display_t *d)
+{
+    void *err;
+    shutdown(xcb_get_file_descriptor(d->c), SHUT_RD);
+    pthread_join(d->event_thread, &err);
+}
+
 
 void display_close(display_t *d)
 {

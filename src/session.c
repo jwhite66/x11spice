@@ -229,6 +229,8 @@ void session_end(session_t *s)
     s->running = 0;
     global_session = NULL;
 
+    display_stop_event_thread(&s->display);
+
     scanner_destroy(&s->scanner);
 
     display_destroy_screen_images(&s->display);
