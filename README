@@ -81,8 +81,9 @@ Using code coverage (gcov)
 If you want to use gcov for source code coverage, you will need
 the AX_CODE_COVERAGE macro.  On Fedora, that is installed
 by the autoconf-archive package.  Once you have that available,
-uncomment the appropriate line in configure.ac and src/Makefile.am
-and rebuild.
+uncomment the appropriate line in configure.ac and src/Makefile.am,
+reconfigure with --enable-code-coverage, and rebuild.  That will
+then enable a check-code-coverage target in the Makefile.
 
 
 Community
