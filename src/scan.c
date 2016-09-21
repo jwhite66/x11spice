@@ -183,7 +183,7 @@ static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, 
         w = scanner->session->display.fullscreen->w - x;
 
     if (y + h > scanner->session->display.fullscreen->h)
-        h = scanner->session->display.fullscreen->w - y;
+        h = scanner->session->display.fullscreen->h - y;
 
     scanner_push(scanner, SCANLINE_SCAN_REPORT, x, y, w, h);
 }
