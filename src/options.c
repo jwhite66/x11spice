@@ -155,6 +155,9 @@ int options_handle_ssl(options_t *options, const char *spec)
     int i = 0;
     int rc = 0;
 
+    if (!in)
+        return X11SPICE_ERR_MALLOC;
+
     for (p = strtok_r(in, ",", &save); p; p = strtok_r(NULL, ",", &save), i++) {
         if (strlen(p) == 0)
             continue;
