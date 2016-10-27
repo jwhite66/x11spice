@@ -135,7 +135,7 @@ static void usage(options_t *options, char *argv0)
     printf("      checking for an open port, and using the first one available.\n");
     printf("\n");
     printf("Options:\n");
-    printf("%s [--viewonly]\n", indent);
+    printf("%s [--allow-control]\n", indent);
     printf("%s [--timeout=<seconds>]\n", indent);
     printf("%s [--display=<DISPLAY>]\n", indent);
     printf("%s [--generate-password[=<len>]\n", indent);
@@ -219,7 +219,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     int rc;
     int longindex = 0;
 
-    enum option_types {  OPTION_VIEWONLY, OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
+    enum option_types {  OPTION_ALLOW_CONTROL, OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
                          OPTION_PASSWORD, OPTION_PASSWORD_FILE, OPTION_CONFIG, OPTION_SSL,
                          OPTION_GENERATE_PASSWORD, OPTION_DISPLAY, OPTION_MINIMIZE,
                          OPTION_HELP
@@ -227,7 +227,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
 
     static struct option long_options[] =
     {
-        {"viewonly",                 0, 0,       OPTION_VIEWONLY },
+        {"allow-control",            0, 0,       OPTION_ALLOW_CONTROL },
         {"timeout",                  1, 0,       OPTION_TIMEOUT  },
         {"auto",                     1, 0,       OPTION_AUTO },
         {"hide",                     0, 0,       OPTION_HIDE },
@@ -250,8 +250,8 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
         }
 
         switch (rc) {
-            case OPTION_VIEWONLY:
-                options->viewonly = 1;
+            case OPTION_ALLOW_CONTROL:
+                options->allow_control = 1;
                 break;
 
             case OPTION_TIMEOUT:
@@ -357,7 +357,7 @@ void options_from_config(options_t *options)
 
     options->timeout = int_option(userkey, systemkey, "spice", "timeout");
     options->minimize = bool_option(userkey, systemkey, "spice", "minimize");
-    options->viewonly = bool_option(userkey, systemkey, "spice", "viewonly");
+    options->allow_control = bool_option(userkey, systemkey, "spice", "allow-control");
     options->generate_password = int_option(userkey, systemkey, "spice", "generate-password");
     options->hide = bool_option(userkey, systemkey, "spice", "hide");
     options->display = string_option(userkey, systemkey, "spice", "display");

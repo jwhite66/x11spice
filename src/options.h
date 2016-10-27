@@ -43,7 +43,7 @@ typedef struct {
     /* Both config and command line arguments */
     long timeout;
     int minimize;
-    int viewonly;
+    int allow_control;
     int generate_password;
     int hide;
     char *display;
