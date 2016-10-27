@@ -58,6 +58,8 @@ typedef struct {
     int exit_on_disconnect;
     char *virtio_path;
     char *uinput_path;
+    char *on_connect;
+    char *on_disconnect;
 
     /* file names of config files */
     char *user_config_file;

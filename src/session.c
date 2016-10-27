@@ -36,6 +36,9 @@
 #include <xcb/xcb_aux.h>
 #include <xcb/xkb.h>
 
+#include <sys/types.h>
+#include <sys/wait.h>
+
 #include "x11spice.h"
 #include "session.h"
 #include "scan.h"
@@ -185,11 +188,18 @@ void session_handle_mouse_buttons(session_t *session, uint32_t buttons_state)
     session_handle_button_change(session, convert_spice_buttons(0, buttons_state));
 }
 
+static void cleanup_process(int pid)
+{
+    if (waitpid(pid, NULL, WNOHANG) == pid)
+        return;
+
+    killpg(pid, SIGKILL);
+}
+
 int session_start(session_t *s)
 {
     int rc = 0;
 
-    s->running = FALSE;
     s->spice.session = s;
     s->display.session = s;
     s->scanner.session = s;
@@ -226,6 +236,7 @@ static void flush_and_lock(session_t *s)
 
 void session_end(session_t *s)
 {
+    session_remote_disconnected();
     s->running = 0;
     global_session = NULL;
 
@@ -235,6 +246,29 @@ void session_end(session_t *s)
 
     display_destroy_screen_images(&s->display);
 
+}
+
+int session_create(session_t *s)
+{
+    int rc = 0;
+
+#if ! GLIB_CHECK_VERSION(2, 32, 0)
+    g_thread_init(NULL);
+#endif
+
+    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
+    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
+    s->lock = g_mutex_new();
+
+    s->connected = FALSE;
+    s->connect_pid = 0;
+    s->disconnect_pid = 0;
+
+    return rc;
+}
+
+void session_destroy(session_t *s)
+{
     flush_and_lock(s);
 
     if (s->cursor_queue)
@@ -248,19 +282,13 @@ void session_end(session_t *s)
     g_mutex_free(s->lock);
     s->lock = NULL;
 
-}
+    if (s->connect_pid)
+        cleanup_process(s->connect_pid);
+    s->connect_pid = 0;
 
-int session_create(session_t *s)
-{
-#if ! GLIB_CHECK_VERSION(2, 32, 0)
-    g_thread_init(NULL);
-#endif
-
-    s->cursor_queue = g_async_queue_new_full(free_cursor_queue_item);
-    s->draw_queue = g_async_queue_new_full(free_draw_queue_item);
-    s->lock = g_mutex_new();
-
-    return 0;
+    if (s->disconnect_pid)
+        cleanup_process(s->disconnect_pid);
+    s->disconnect_pid = 0;
 }
 
 /* Important note - this is meant to be called from
@@ -388,16 +416,71 @@ void session_disconnect_client(session_t *session)
         spice_server_set_noauth(session->spice.server);
 }
 
+static void invoke_on_connect(session_t *session, const char *from)
+{
+    if (session->connect_pid)
+        cleanup_process(session->connect_pid);
+    session->connect_pid = fork();
+    if (session->connect_pid == 0)
+    {
+        /* TODO:  If would be nice to either close the spice socket after
+              the fork, or to get CLOEXEC set on the socket after open. */
+        setsid();
+        execl(session->options.on_connect, session->options.on_connect, from, NULL);
+        g_error("Exec of connect command [%s %s] failed", session->options.on_connect, from);
+        exit(-1);
+    }
+}
+
+static void invoke_on_disconnect(session_t *session)
+{
+    if (session->connect_pid)
+        cleanup_process(session->connect_pid);
+    session->connect_pid = 0;
+
+    if (session->disconnect_pid)
+        cleanup_process(session->disconnect_pid);
+
+    session->disconnect_pid = fork();
+    if (session->disconnect_pid == 0)
+    {
+        /* TODO:  If would be nice to either close the spice socket after
+              the fork, or to get CLOEXEC set on the socket after open. */
+        setsid();
+        execl(session->options.on_disconnect, session->options.on_disconnect, NULL);
+        g_error("Exec of disconnect command [%s] failed", session->options.on_disconnect);
+        exit(-1);
+    }
+}
+
 void session_remote_connected(const char *from)
 {
-    if (!global_session)
+    #define GUI_FROM_PREFIX "Connection from "
+    char *from_string;
+    if (!global_session || global_session->connected)
         return;
-    gui_remote_connected(&global_session->gui, from);
+
+    global_session->connected = TRUE;
+
+    from_string = calloc(1, strlen(from) + strlen(GUI_FROM_PREFIX) + 1);
+    if (from_string)
+    {
+        strcpy(from_string, GUI_FROM_PREFIX);
+        strcat(from_string, from);
+        gui_remote_connected(&global_session->gui, from_string);
+        free(from_string);
+    }
+    if (global_session->options.on_connect)
+        invoke_on_connect(global_session, from);
 }
 
 void session_remote_disconnected(void)
 {
-    if (!global_session)
+    if (!global_session || !global_session->connected)
         return;
+
+    global_session->connected = FALSE;
+    if (global_session->options.on_disconnect)
+        invoke_on_disconnect(global_session);
     gui_remote_disconnected(&global_session->gui);
 }

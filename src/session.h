@@ -40,6 +40,10 @@ typedef struct session_struct {
     scanner_t scanner;
     int running;
 
+    int connected;
+    int connect_pid;
+    int disconnect_pid;
+
     GMutex *lock;
     int draw_command_in_progress;
 
@@ -51,6 +55,7 @@ typedef struct session_struct {
 **  Prototypes
 **--------------------------------------------------------------------------*/
 int session_create(session_t *s);
+void session_destroy(session_t *s);
 int session_start(session_t *s);
 void session_end(session_t *s);
 int session_alive(session_t *s);

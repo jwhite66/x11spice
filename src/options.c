@@ -60,6 +60,10 @@ void options_free(options_t *options)
     options->virtio_path = NULL;
     g_free(options->uinput_path);
     options->uinput_path = NULL;
+    g_free(options->on_connect);
+    options->on_connect = NULL;
+    g_free(options->on_disconnect);
+    options->on_disconnect = NULL;
 
     if (options->listen)
         free(options->listen);
@@ -369,6 +373,8 @@ void options_from_config(options_t *options)
     options->exit_on_disconnect = bool_option(userkey, systemkey, "spice", "exit-on-disconnect");
     options->virtio_path = string_option(userkey, systemkey, "spice", "virtio-path");
     options->uinput_path = string_option(userkey, systemkey, "spice", "uinput-path");
+    options->on_connect = string_option(userkey, systemkey, "spice", "on-connect");
+    options->on_disconnect = string_option(userkey, systemkey, "spice", "on-disconnect");
 
     options_handle_ssl_file_options(options, userkey, systemkey);
 

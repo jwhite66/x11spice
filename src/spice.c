@@ -176,7 +176,7 @@ static void channel_event(int event, SpiceChannelEventInfo *info)
             event, info->connection_id, info->type, info->id, info->flags);
     if (event == SPICE_CHANNEL_EVENT_INITIALIZED && info->type == SPICE_CHANNEL_MAIN) {
         char from[NI_MAXHOST + NI_MAXSERV + 128];
-        strcpy(from, "Remote computer");
+        strcpy(from, "Remote");
         if (info->flags & SPICE_CHANNEL_EVENT_FLAG_ADDR_EXT) {
             int rc;
             char host[NI_MAXHOST];
@@ -184,7 +184,7 @@ static void channel_event(int event, SpiceChannelEventInfo *info)
             rc = getnameinfo((struct sockaddr *) &info->paddr_ext, info->plen_ext, host,
                              sizeof(host), server, sizeof(server), 0);
             if (rc == 0)
-                snprintf(from, sizeof(from), "Connection from %s:%s", host, server);
+                snprintf(from, sizeof(from), "%s:%s", host, server);
         }
         session_remote_connected(from);
     }
