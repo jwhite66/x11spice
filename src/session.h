@@ -44,6 +44,10 @@ typedef struct session_struct {
     int connect_pid;
     int disconnect_pid;
 
+#if defined(HAVE_LIBAUDIT_H)
+    int audit_id;
+#endif
+
     GMutex *lock;
     int draw_command_in_progress;
 

@@ -41,6 +41,10 @@
 #include "options.h"
 #include "x11spice.h"
 
+#if defined(HAVE_LIBAUDIT_H)
+#include <libaudit.h>
+#endif
+
 void options_init(options_t *options)
 {
     memset(options, 0, sizeof(*options));
@@ -375,6 +379,14 @@ void options_from_config(options_t *options)
     options->uinput_path = string_option(userkey, systemkey, "spice", "uinput-path");
     options->on_connect = string_option(userkey, systemkey, "spice", "on-connect");
     options->on_disconnect = string_option(userkey, systemkey, "spice", "on-disconnect");
+    options->audit = bool_option(userkey, systemkey, "spice", "audit");
+    options->audit_message_type = int_option(userkey, systemkey, "spice", "audit-message-type");
+
+#if defined(HAVE_LIBAUDIT_H)
+    /* Pick an arbitrary default in the user range.  CodeWeavers was founed in 1996, so 1196 it is... */
+    if (options->audit_message_type == 0)
+        options->audit_message_type = AUDIT_LAST_USER_MSG - 3;
+#endif
 
     options_handle_ssl_file_options(options, userkey, systemkey);
 

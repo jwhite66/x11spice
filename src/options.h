@@ -60,6 +60,8 @@ typedef struct {
     char *uinput_path;
     char *on_connect;
     char *on_disconnect;
+    int audit;
+    int audit_message_type;
 
     /* file names of config files */
     char *user_config_file;

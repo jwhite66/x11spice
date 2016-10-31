@@ -21,6 +21,8 @@ AC_PROG_SED
 # and uncomment this line, and the matching one in src/Makefile.am.
 #AX_CODE_COVERAGE()
 
+AC_CHECK_HEADERS(libaudit.h)
+AC_CHECK_LIB(audit, audit_open)
 
 AC_PROG_CC
 AC_CONFIG_FILES(Makefile src/Makefile src/tests/Makefile)

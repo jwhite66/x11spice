@@ -42,5 +42,6 @@
 #define X11SPICE_ERR_BIND              15
 #define X11SPICE_ERR_LISTEN            16
 #define X11SPICE_ERR_OPEN              17
+#define X11SPICE_ERR_NOAUDIT           18
 
 #endif

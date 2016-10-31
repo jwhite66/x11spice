@@ -30,6 +30,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <sched.h>
+#include <errno.h>
 
 #include <xcb/xcb.h>
 #include <xcb/xtest.h>
@@ -43,6 +44,9 @@
 #include "session.h"
 #include "scan.h"
 
+#if defined(HAVE_LIBAUDIT_H)
+#include <libaudit.h>
+#endif
 
 /*----------------------------------------------------------------------------
 ** I fought very hard to avoid global variables, but the spice channel_event
@@ -248,6 +252,44 @@ void session_end(session_t *s)
 
 }
 
+static int begin_audit(session_t *s)
+{
+    int rc = X11SPICE_ERR_NOAUDIT;
+#if defined(HAVE_LIBAUDIT) && defined(HAVE_LIBAUDIT_H)
+    s->audit_id = audit_open();
+    if (s->audit_id != -1)
+    {
+        rc = audit_log_user_message(s->audit_id, s->options.audit_message_type,
+            "x11spice begin", NULL, NULL, NULL, 1);
+        if (rc <= 0)
+        {
+            perror("audit_log_user_message");
+            rc = X11SPICE_ERR_NOAUDIT;
+        }
+        else
+            rc = 0;
+    }
+    else
+        perror("audit_open");
+#else
+    fprintf(stderr, "Error: audit requested, but not libaudit available.\n");
+#endif
+    return rc;
+}
+
+static void end_audit(session_t *s)
+{
+#if defined(HAVE_LIBAUDIT) && defined(HAVE_LIBAUDIT_H)
+    if (s->audit_id != -1)
+    {
+        audit_log_user_message(s->audit_id, s->options.audit_message_type,
+            "x11spice close", NULL, NULL, NULL, 1);
+        audit_close(s->audit_id);
+    }
+    s->audit_id = -1;
+#endif
+}
+
 int session_create(session_t *s)
 {
     int rc = 0;
@@ -263,6 +305,9 @@ int session_create(session_t *s)
     s->connected = FALSE;
     s->connect_pid = 0;
     s->disconnect_pid = 0;
+
+    if (s->options.audit)
+        rc = begin_audit(s);
 
     return rc;
 }
@@ -289,6 +334,9 @@ void session_destroy(session_t *s)
     if (s->disconnect_pid)
         cleanup_process(s->disconnect_pid);
     s->disconnect_pid = 0;
+
+    if (s->options.audit)
+        end_audit(s);
 }
 
 /* Important note - this is meant to be called from
@@ -472,6 +520,10 @@ void session_remote_connected(const char *from)
     }
     if (global_session->options.on_connect)
         invoke_on_connect(global_session, from);
+
+    if (global_session->options.audit && global_session->audit_id != -1)
+        audit_log_user_message(global_session->audit_id, global_session->options.audit_message_type,
+            "x11spice connect", NULL, NULL, NULL, 1);
 }
 
 void session_remote_disconnected(void)
@@ -483,4 +535,8 @@ void session_remote_disconnected(void)
     if (global_session->options.on_disconnect)
         invoke_on_disconnect(global_session);
     gui_remote_disconnected(&global_session->gui);
+
+    if (global_session->options.audit && global_session->audit_id != -1)
+        audit_log_user_message(global_session->audit_id, global_session->options.audit_message_type,
+            "x11spice disconnect", NULL, NULL, NULL, 1);
 }
