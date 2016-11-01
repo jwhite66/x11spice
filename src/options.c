@@ -144,6 +144,7 @@ static void usage(options_t *options, char *argv0)
     printf("\n");
     printf("Options:\n");
     printf("%s [--allow-control]\n", indent);
+    printf("%s [--no-allow-control]\n", indent);
     printf("%s [--timeout=<seconds>]\n", indent);
     printf("%s [--display=<DISPLAY>]\n", indent);
     printf("%s [--generate-password[=<len>]\n", indent);
@@ -227,7 +228,8 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     int rc;
     int longindex = 0;
 
-    enum option_types {  OPTION_ALLOW_CONTROL, OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
+    enum option_types {  OPTION_ALLOW_CONTROL, OPTION_DISALLOW_CONTROL,
+                         OPTION_TIMEOUT, OPTION_AUTO, OPTION_HIDE,
                          OPTION_PASSWORD, OPTION_PASSWORD_FILE, OPTION_CONFIG, OPTION_SSL,
                          OPTION_GENERATE_PASSWORD, OPTION_DISPLAY, OPTION_MINIMIZE,
                          OPTION_HELP
@@ -236,6 +238,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
     static struct option long_options[] =
     {
         {"allow-control",            0, 0,       OPTION_ALLOW_CONTROL },
+        {"no-allow-control",         0, 0,       OPTION_DISALLOW_CONTROL },
         {"timeout",                  1, 0,       OPTION_TIMEOUT  },
         {"auto",                     1, 0,       OPTION_AUTO },
         {"hide",                     0, 0,       OPTION_HIDE },
@@ -260,6 +263,10 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
         switch (rc) {
             case OPTION_ALLOW_CONTROL:
                 options->allow_control = 1;
+                break;
+
+            case OPTION_DISALLOW_CONTROL:
+                options->allow_control = 0;
                 break;
 
             case OPTION_TIMEOUT:
