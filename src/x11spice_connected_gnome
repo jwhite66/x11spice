@@ -1,0 +1,29 @@
+#!/bin/bash
+#-----------------------------------------------------------------------------
+# x11spice_connected_gnome
+#  A sample script to use with the x11spice 'on_connect' function.
+# This script is called when a connection occurs.
+# This sample script saves the current desktop background, and turns it red.
+#-----------------------------------------------------------------------------
+G=`which gconftool-2`
+BG_DIR=/desktop/gnome/background
+SAVE_KEY=$BG_DIR/x11spice_save_background
+
+if [ -z "$G" ] ; then
+    echo Error: gconftool-2 not available 1>&2
+    exit -1
+fi
+
+# Remove our backup key before we snapshot the current desktop background
+$G --unset $SAVE_KEY
+
+# Snapshot the current desktop background
+save=`$G --dump $BG_DIR`
+$G --set -t string $SAVE_KEY "$save"
+
+# Turn the screen red
+$G --set -t string $BG_DIR/primary_color "#FFFF00000000"
+$G --set -t string $BG_DIR/color_shading_type solid
+$G --set -t boolean $BG_DIR/draw_background false
+
+exit 0

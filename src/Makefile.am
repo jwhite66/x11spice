@@ -28,6 +28,8 @@ x11spice_SOURCES = \
     x11spice.h \
     main.c
 
+dist_bin_SCRIPTS=x11spice_connected_gnome x11spice_disconnected_gnome
+
 dist_man_MANS = data/x11spice.1
 
 nobase_sysconf_DATA = xdg/x11spice/x11spice.conf
