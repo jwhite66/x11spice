@@ -1,5 +1,5 @@
 Name:           x11spice
-Version:        1.0
+Version:        1.1
 Release:        1%{?dist}
 Summary:        Utility to share an x11 desktop via Spice
 Group:          Applications/System
@@ -27,6 +27,8 @@ make %{?_smp_mflags}
 %files
 %doc COPYING ChangeLog README
 %{_bindir}/x11spice
+%{_bindir}/x11spice_connected_gnome
+%{_bindir}/x11spice_disconnected_gnome
 %{_sysconfdir}/xdg/x11spice/x11spice.conf
 %{_datadir}/applications/x11spice.desktop
 %{_datadir}/icons/hicolor/scalable/apps/x11spice.svg
@@ -34,7 +36,12 @@ make %{?_smp_mflags}
 
 
 %changelog
+* Wed Nov 02 2016 Jeremy White <jwhite@codeweavers.com> 1.1.0-1
+- Fix issues uncovered by Coverity
+- Invert the logic of view only; make it the default 
+- Add optional audit calls
+- Add callback capabilities
+- Provide a connect / disconnect callback facility
+
 * Fri Sep 02 2016 Jeremy White <jwhite@codeweavers.com> 1.0.0-1
 - Initial package
-/home/jwhite/x11spice/share/applications/x11spice.desktop
-/home/jwhite/x11spice/share/icons/hicolor/scalable/apps/x11spice.svg

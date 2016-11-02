@@ -1,0 +1,10 @@
+* Wed Nov 02 2016 Jeremy White <jwhite@codeweavers.com> 1.1.0-1
+- Fix issues uncovered by Coverity
+- Invert the logic of view only; make it the default 
+- Add optional audit calls
+- Add callback capabilities
+- Provide a connect / disconnect callback facility
+
+* Fri Sep 02 2016 Jeremy White <jwhite@codeweavers.com> 1.0.0-1
+- Initial package
+

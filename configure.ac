@@ -1,4 +1,4 @@
-AC_INIT([x11spice], 1.0)
+AC_INIT([x11spice], 1.1)
 AM_INIT_AUTOMAKE
 
 PKG_CHECK_MODULES(XCB, xcb)
