@@ -27,6 +27,7 @@
 
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <signal.h>
 
 #include "x11spice.h"
@@ -129,6 +130,15 @@ int main(int argc, char *argv[])
     session_started = 1;
 
     handle_sigterm();
+
+    /*------------------------------------------------------------------------
+    **  The spice server (prior to November 2016) can call exit() prior to
+    **    exiting, most notably when we have exit-on-disconnect turned on.
+    **    By registering this handler, we ensure that disconnect scripts are
+    **    called even if that happens
+    **----------------------------------------------------------------------*/
+    if (session.options.on_disconnect || session.options.audit)
+        atexit(session_remote_disconnected);
 
     gui_run(&session.gui);
 
