@@ -521,9 +521,11 @@ void session_remote_connected(const char *from)
     if (global_session->options.on_connect)
         invoke_on_connect(global_session, from);
 
+#if defined(HAVE_LIBAUDIT)
     if (global_session->options.audit && global_session->audit_id != -1)
         audit_log_user_message(global_session->audit_id, global_session->options.audit_message_type,
             "x11spice connect", NULL, NULL, NULL, 1);
+#endif
 }
 
 void session_remote_disconnected(void)
@@ -536,7 +538,9 @@ void session_remote_disconnected(void)
         invoke_on_disconnect(global_session);
     gui_remote_disconnected(&global_session->gui);
 
+#if defined(HAVE_LIBAUDIT)
     if (global_session->options.audit && global_session->audit_id != -1)
         audit_log_user_message(global_session->audit_id, global_session->options.audit_message_type,
             "x11spice disconnect", NULL, NULL, NULL, 1);
+#endif
 }
