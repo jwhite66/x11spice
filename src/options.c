@@ -126,7 +126,7 @@ static gboolean bool_option(GKeyFile *u, GKeyFile *s, const gchar *section, cons
     return ret;
 }
 
-static void usage(options_t *options, char *argv0)
+static void usage(char *argv0)
 {
     char indent[256];
 
@@ -313,7 +313,7 @@ int options_parse_arguments(int argc, char *argv[], options_t *options)
                 break;
 
             default:
-                usage(options, argv[0]);
+                usage(argv[0]);
                 return X11SPICE_ERR_BADARGS;
         }
     }

@@ -188,7 +188,8 @@ static void push_tiles_report(scanner_t *scanner, int start_row, int start_col, 
     scanner_push(scanner, SCANLINE_SCAN_REPORT, x, y, w, h);
 }
 
-static void grow_changed_tiles(scanner_t *scanner, int *tiles_changed_in_row,
+static void grow_changed_tiles(scanner_t *scanner G_GNUC_UNUSED,
+                               int *tiles_changed_in_row,
                                int tiles_changed[][NUM_HORIZONTAL_TILES])
 {
     int i;

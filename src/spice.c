@@ -194,7 +194,7 @@ static void channel_event(int event, SpiceChannelEventInfo *info)
         session_remote_disconnected();
 }
 
-static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker)
+static void attach_worker(QXLInstance *qin, QXLWorker *qxl_worker G_GNUC_UNUSED)
 {
     static int count = 0;
 
@@ -225,11 +225,11 @@ static void set_compression_level(QXLInstance *qin, int level)
 
 /* Newer spice servers no longer transmit this information,
  * so let's just disregard it */
-static void set_mm_time(QXLInstance *qin, uint32_t mm_time)
+static void set_mm_time(QXLInstance *qin G_GNUC_UNUSED, uint32_t mm_time G_GNUC_UNUSED)
 {
 }
 
-static void get_init_info(QXLInstance *qin, QXLDevInitInfo *info)
+static void get_init_info(QXLInstance *qin G_GNUC_UNUSED, QXLDevInitInfo *info)
 {
     memset(info, 0, sizeof(*info));
     info->num_memslots = 1;
@@ -270,7 +270,8 @@ static int req_cmd_notification(QXLInstance *qin)
     return 1;
 }
 
-static void release_resource(QXLInstance *qin, struct QXLReleaseInfoExt release_info)
+static void release_resource(QXLInstance *qin G_GNUC_UNUSED,
+                             struct QXLReleaseInfoExt release_info)
 {
     spice_free_release((spice_release_t *) release_info.info->id);
 }
@@ -303,33 +304,36 @@ static int req_cursor_notification(QXLInstance *qin)
     return 1;
 }
 
-static void notify_update(QXLInstance *qin, uint32_t update_id)
+static void notify_update(QXLInstance *qin G_GNUC_UNUSED, uint32_t update_id G_GNUC_UNUSED)
 {
     g_debug("TODO: %s UNIMPLEMENTED", __func__);
 }
 
-static int flush_resources(QXLInstance *qin)
+static int flush_resources(QXLInstance *qin G_GNUC_UNUSED)
 {
     g_debug("TODO: %s UNIMPLEMENTEDs", __func__);
     // Return 0 to direct the server to flush resources
     return 1;
 }
 
-static void async_complete(QXLInstance *qin, uint64_t cookie)
+static void async_complete(QXLInstance *qin G_GNUC_UNUSED, uint64_t cookie)
 {
     g_debug("%s: cookie 0x%lx", __FUNCTION__, cookie);
     spice_free_release((spice_release_t *) cookie);
 }
 
-static void update_area_complete(QXLInstance *qin, uint32_t surface_id,
-                                 struct QXLRect *updated_rects, uint32_t num_updated_rects)
+static void update_area_complete(QXLInstance *qin G_GNUC_UNUSED,
+                                 uint32_t surface_id G_GNUC_UNUSED,
+                                 struct QXLRect *updated_rects G_GNUC_UNUSED,
+                                 uint32_t num_updated_rects G_GNUC_UNUSED)
 {
     g_debug("TODO: %s UNIMPLEMENTED!", __func__);
 }
 
-static int client_monitors_config(QXLInstance *qin, VDAgentMonitorsConfig *monitors_config)
+static int client_monitors_config(QXLInstance *qin G_GNUC_UNUSED,
+                                  VDAgentMonitorsConfig *monitors_config)
 {
-    int i;
+    uint i;
     if (!monitors_config) {
         /* a NULL is used as a test to see if we support this function */
         g_debug("%s: NULL monitors_config", __func__);
@@ -420,7 +424,7 @@ static uint8_t kbd_get_leds(SpiceKbdInstance *sin)
     return ret;
 }
 
-void tablet_set_logical_size(SpiceTabletInstance *tablet, int width, int height)
+void tablet_set_logical_size(SpiceTabletInstance *tablet G_GNUC_UNUSED, int width, int height)
 {
     g_debug("TODO: %s UNIMPLEMENTED. (width %dx%d)", __func__, width, height);
 }
@@ -517,7 +521,7 @@ void initialize_spice_instance(spice_t *s)
         .channel_event = channel_event
     };
 
-    const static QXLInterface display_sif = {
+    static const QXLInterface display_sif = {
         .base = {
                  .type = SPICE_INTERFACE_QXL,
                  .description = "x11spice qxl",

@@ -93,7 +93,7 @@ static void uinput_handle_absolute(agent_t *agent, struct input_event *ev)
                                   agent->uinput_buttons_state);
 }
 
-static void uinput_read_cb(int fd, int event, void *opaque)
+static void uinput_read_cb(int fd G_GNUC_UNUSED, int event G_GNUC_UNUSED, void *opaque)
 {
     agent_t *agent = (agent_t *) opaque;
     struct input_event *ev;
@@ -110,7 +110,7 @@ static void uinput_read_cb(int fd, int event, void *opaque)
 
     agent->uinput_offset += rc;
 
-    while (agent->uinput_offset >= sizeof(*ev)) {
+    while ((uint) agent->uinput_offset >= sizeof(*ev)) {
         ev = (struct input_event *) agent->uinput_buffer;
         agent->uinput_offset -= sizeof(*ev);
         if (agent->uinput_offset > 0)
@@ -228,7 +228,7 @@ static int agent_char_read(SpiceCharDeviceInstance *sin, uint8_t *buf, int len)
 }
 
 #if SPICE_SERVER_VERSION >= 0x000c02
-static void agent_char_event(SpiceCharDeviceInstance *sin, uint8_t event)
+static void agent_char_event(SpiceCharDeviceInstance *sin G_GNUC_UNUSED, uint8_t event)
 {
     g_debug("agent event %d", event);
 }
@@ -241,7 +241,7 @@ static void agent_char_state(SpiceCharDeviceInstance *sin, int connected)
     g_debug("agent state %d", connected);
 }
 
-static void on_read_available(int fd, int event, void *opaque)
+static void on_read_available(int fd G_GNUC_UNUSED, int event G_GNUC_UNUSED, void *opaque)
 {
     agent_t *agent = (agent_t *) opaque;
     if (agent->virtio_client_fd == -1) {
@@ -250,7 +250,7 @@ static void on_read_available(int fd, int event, void *opaque)
     spice_server_char_device_wakeup(&agent->base);
 }
 
-static void on_accept(int fd, int event, void *opaque)
+static void on_accept(int fd, int event G_GNUC_UNUSED, void *opaque)
 {
     agent_t *agent = (agent_t *) opaque;
     struct sockaddr_un address;
@@ -326,7 +326,7 @@ int agent_start(spice_t *spice, options_t *options, agent_t *agent)
 {
     int rc;
 
-    const static SpiceCharDeviceInterface agent_sif = {
+    static const SpiceCharDeviceInterface agent_sif = {
         .base = {
                  .type = SPICE_INTERFACE_CHAR_DEVICE,
                  .description = "x11spice vdagent",

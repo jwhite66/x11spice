@@ -54,13 +54,13 @@ void gui_remote_disconnected(gui_t *gui)
     gtk_widget_set_sensitive(gui->disconnect_button, FALSE);
 }
 
-void gui_disconnect_clicked(GtkWidget *widget, gpointer data)
+void gui_disconnect_clicked(GtkWidget *widget G_GNUC_UNUSED, gpointer data)
 {
     gui_t *gui = (gui_t *)data;
     session_disconnect_client(gui->session);
 }
 
-static gboolean timeout_if_no_connection(gpointer user_data)
+static gboolean timeout_if_no_connection(gpointer user_data G_GNUC_UNUSED)
 {
     g_debug("Timeout waiting for connection.");
     gtk_main_quit();

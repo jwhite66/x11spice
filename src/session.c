@@ -138,7 +138,8 @@ void session_handle_key(session_t *session, uint8_t keycode, int is_press)
     xcb_flush(session->display.c);
 }
 
-void session_handle_mouse_position(session_t *session, int x, int y, uint32_t buttons_state)
+void session_handle_mouse_position(session_t *session, int x, int y,
+                                   uint32_t buttons_state G_GNUC_UNUSED)
 {
     if (! session->options.allow_control)
         return;

@@ -39,7 +39,7 @@
 #include "session.h"
 
 
-static void sigterm_handler(int arg)
+static void sigterm_handler(int arg G_GNUC_UNUSED)
 {
     gui_sigterm();
 }
