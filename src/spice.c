@@ -31,6 +31,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <netdb.h>
+#include <spice/macros.h>
 
 #include "local_spice.h"
 #include "x11spice.h"

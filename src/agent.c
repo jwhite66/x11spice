@@ -31,6 +31,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <spice/macros.h>
 
 #include "x11spice.h"
 #include "agent.h"
