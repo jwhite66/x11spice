@@ -72,7 +72,8 @@ static int bits_per_pixel(display_t *d)
 }
 
 
-static void handle_cursor_notify(display_t *display, xcb_xfixes_cursor_notify_event_t *cev)
+static void handle_cursor_notify(display_t *display,
+                                 xcb_xfixes_cursor_notify_event_t *cev G_GNUC_UNUSED)
 {
     xcb_xfixes_get_cursor_image_cookie_t icookie;
     xcb_xfixes_get_cursor_image_reply_t *ir;

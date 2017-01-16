@@ -61,7 +61,7 @@ static int test_common_start(test_t * test, x11spice_server_t * server,
     return 0;
 }
 
-static void test_common_stop(test_t * test, x11spice_server_t * server)
+static void test_common_stop(test_t * test G_GNUC_UNUSED, x11spice_server_t * server)
 {
     x11spice_stop(server);
 }
@@ -154,7 +154,7 @@ void test_resize(xdummy_t *xdummy, gconstpointer user_data)
     x11spice_server_t server;
     int rc;
     char buf[4096];
-    int i;
+    uint i;
     static char *modes[] = { "640x480", "800x600", "1024x768", "1280x1024", "1920x1080" };
 
     if (check_binary("xrandr", xdummy->display) || check_binary("spicy-screenshot", NULL))

@@ -136,7 +136,7 @@ static int generate_paths(xdummy_t *server, gconstpointer user_data)
     return 0;
 }
 
-static int exec_xorg(xdummy_t *server, gconstpointer user_data)
+static int exec_xorg(xdummy_t *server, gconstpointer user_data G_GNUC_UNUSED)
 {
     FILE *fp;
     char fdbuf[100];
@@ -243,7 +243,7 @@ void start_server(xdummy_t *server, gconstpointer user_data)
     g_message("server started; display %s", server->display);
 }
 
-void stop_server(xdummy_t *server, gconstpointer user_data)
+void stop_server(xdummy_t *server, gconstpointer user_data G_GNUC_UNUSED)
 {
     g_message("server stopping; display %s", server->display);
     if (server->running) {
